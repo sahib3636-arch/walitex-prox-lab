@@ -1,0 +1,14 @@
+Run 41217984667 — candidate 264207406, emulator API 31 / x86_64, after tapping row 5 (“Disable calls and video calls”). The temporary `WaResources.getAlertDialog` Java wrapper logged this call stack:
+
+    litex.WaResources.getAlertDialog(Unknown Source:4)
+    litex.bridge.Extra.setPrmBanner(Native Method)
+    litex.bridge.Listener$Switch.onCheckedChanged(Native Method)
+    android.widget.CompoundButton.setChecked(...)
+    androidx.appcompat.widget.SwitchCompat.setChecked(...)
+    com.whatsapp.litex.ui.wds.components.toggle.WDSSwitch.setChecked(...)
+    androidx.appcompat.widget.SwitchCompat.toggle(...)
+    android.widget.CompoundButton.performClick(...)
+
+This locates the popup path: `Listener$Switch.onCheckedChanged` calls `Extra.setPrmBanner`, which requests the dialog via `WaResources.getAlertDialog`. The earlier `Listener$Switch.onCheckedCase22` replacement was not the path that produced this dialog. Candidate 264207406 retained the native callback, but row 5 still ended off; this trace-only candidate is not a release.
+
+Raw emulator output: `/home/user/runs/mod11/dialog-trace.txt` and `/home/user/runs/mod11/logcat.txt` while the workspace is available. No chat content or user-device identifiers are included here.

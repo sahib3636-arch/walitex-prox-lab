@@ -59,10 +59,23 @@ The `getPrm(55501/55502)` return-value hypothesis and a local replacement for `L
 - APK SHA-256: `5114346a5ae0eff8d326ce2315fe982fc1442196614c70be135344335f9658df`
 - ZIP: `https://x0.at/vZ3C.zip`
 - Toggle run: `41216388638` (success)
-- Result: row 5 still remained off and displayed the same Premium dialog. The diagnostic tag `ProXCase22` was not present in the captured logcat. This suggests that the replacement did not reach its logging branch; the exact caller/argument path is still being traced, so this absence alone is not treated as conclusive proof that the Java callback is never invoked.
+- Result: row 5 still remained off and displayed the same Premium dialog. The diagnostic tag `ProXCase22` was absent; a follow-up stack trace confirmed the dialog comes through `Extra.setPrmBanner` called by `Listener$Switch.onCheckedChanged`, not the `onCheckedCase22` replacement.
 - Screenshot evidence: `evidence/premium-dialog-candidate-264207405.png`.
 
-This candidate contains experimental tracing and is not a user-ready release. The next diagnostic should capture the Java stack at `WaResources.getAlertDialog` while leaving the native callback behavior intact, then identify the specific gate responsible for the modal.
+### Candidate `264207406` (dialog-call trace; not for user installation)
+
+- APK SHA-256: `c87a16ebaaca455b6618e83aed8bf4f078beb9ad943c53355d87f2be898338c7`
+- ZIP: `https://x0.at/U3mh.zip`
+- Toggle run: `41217984667` (success)
+- The `WaResources.getAlertDialog` stack trace identifies `Extra.setPrmBanner(Native Method)` called by `Listener$Switch.onCheckedChanged(Native Method)` as the actual Premium-dialog path. See `evidence/dialog-callstack-candidate-264207406.txt`.
+- Row 5 still ended off. The temporary wrapper and native callback were diagnostic-only; this is not a release.
+
+### Candidate `264207407` (local feature test; validation in progress)
+
+- APK SHA-256: `8751725f01ccbd99a0c66517467e9feaba006f1d57758fcfafadf706f12f1b9f`
+- ZIP: `https://x0.at/Hwfi.zip`
+- It suppresses `Extra.setPrmBanner` for a local emulator test. This only removes the popup and does not prove that call blocking works. Do not install it on the user's phone.
+- Toggle run `41218735895` is in progress; collect `/home/user/runs/mod12/` and update this status with the observed row/prefs result.
 
 ## Earlier useful results
 
