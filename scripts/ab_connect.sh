@@ -26,6 +26,8 @@ audit() {  # audit <tag> <package>
     adb logcat -v threadtime > "$OUT/logcat-$tag.txt" 2>&1 &
     local lp=$!
     sleep 1
+    adb shell am start -W -n "$2/com.whatsapp.litex.Main" 2>&1 | tee "$OUT/start-$tag.txt"
+    sleep 12
     {
         echo "=== sockets $tag uid=$uid"
         for i in $(seq 1 18); do
@@ -48,14 +50,10 @@ echo "===== clone ====="
 adb install -r -g app.apk 2>&1 | tee "$OUT/install-clone.txt"
 CLONE_PKG="${CLONE_PKG:-com.whatsapp.litey}"
 echo "clone package: $CLONE_PKG"
-adb shell am start -W -n "$CLONE_PKG/com.whatsapp.litex.Main" 2>&1 | tee "$OUT/start-clone.txt"
-sleep 15
 audit clone "$CLONE_PKG"
 
 echo "===== original ====="
 adb install -r -g original.apk 2>&1 | tee "$OUT/install-original.txt"
-adb shell am start -W -n com.whatsapp.litex/com.whatsapp.litex.Main 2>&1 | tee "$OUT/start-original.txt"
-sleep 15
 audit original com.whatsapp.litex
 
 echo done
