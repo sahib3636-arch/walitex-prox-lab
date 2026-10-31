@@ -1,0 +1,70 @@
+name: emulator-probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: release tag that holds the .apk asset
+        required: true
+        default: apk-mf5probe
+      api_level:
+        description: emulator API level
+        required: false
+        default: "33"
+      driver:
+        description: driver script under scripts/
+        required: false
+        default: scripts/probe.sh
+  push:
+    branches: [main]
+
+concurrency:
+  group: emulator-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      - name: Fetch the APK from the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p out
+          tag="${{ github.event.inputs.tag || 'apk-mf5probe' }}"
+          echo "tag=$tag" | tee out/build.txt
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern '*.apk' --clobber -O app.apk
+          ls -la app.apk
+          sha256sum app.apk | tee -a out/build.txt
+
+      - name: Boot the emulator and drive the app
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ github.event.inputs.api_level || 33 }}
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: false
+          disable-animations: true
+          emulator-options: >-
+            -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+            -no-snapshot -camera-back none -camera-front none -netdelay none -netspeed full
+          script: bash ${{ github.event.inputs.driver || 'scripts/probe.sh' }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: probe-out-${{ github.run_id }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: warn
