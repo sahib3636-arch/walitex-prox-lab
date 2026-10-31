@@ -100,6 +100,19 @@ def main() -> int:
         time.sleep(1)
         return 0
 
+    if cmd == "has":
+        root = dump("has")
+        if root is None:
+            return 1
+        wanted = [a.lower() for a in args]
+        for n in root.iter("node"):
+            for attr, v in labels(n):
+                lv = " ".join(v.lower().split())
+                if any(w in lv for w in wanted):
+                    log(f"  found {attr}={v!r}")
+                    return 0
+        return 1
+
     if cmd in ("list", "tap"):
         tag = args[0] if cmd == "list" and args else "ui"
         root = dump(tag)
@@ -112,22 +125,42 @@ def main() -> int:
             for r in rows:
                 log("  " + r)
             return 0
-        # keyword-major: the order of the arguments is the priority order. A modal alert sits on
-        # top of the page it covers, and the covered button is still in the dump, so "first node
-        # that matches anything" can tap straight through an alert that has to be dismissed.
+        # keyword-major (the order of arguments is the priority order), and within a keyword the
+        # best candidate wins: an exact label beats a substring, and a clickable node beats plain
+        # text. The EULA page contains the sentence 'Tap "Agree and continue"…', so a naive
+        # substring match taps the paragraph in the middle of the screen instead of the button.
         wanted = [a.lower() for a in args]
+        parent = {c: p for p in root.iter("node") for c in p}
+
+        def clickable(n) -> bool:
+            cur = n
+            for _ in range(6):
+                if cur is None:
+                    break
+                if (cur.get("clickable") or "").lower() == "true":
+                    return True
+                cur = parent.get(cur)
+            return False
+
         for w in wanted:
+            best = None
             for n in root.iter("node"):
                 for attr, v in labels(n):
-                    if w not in v.lower():
+                    lv = " ".join(v.lower().split())
+                    if w not in lv:
                         continue
+                    score = (0 if lv == w else (1 if lv.startswith(w) else 2),
+                             0 if clickable(n) else 1)
                     c = centre(n)
-                    if not c:
-                        continue
-                    log(f"  tap {attr}={v!r} at {c} for {w!r}")
-                    sh("adb", "shell", "input", "tap", str(c[0]), str(c[1]))
-                    time.sleep(2)
-                    return 0
+                    if c and (best is None or score < best[0]):
+                        best = (score, attr, v, c)
+            if best is None:
+                continue
+            _, attr, v, c = best
+            log(f"  tap {attr}={v!r} at {c} for {w!r}")
+            sh("adb", "shell", "input", "tap", str(c[0]), str(c[1]))
+            time.sleep(2)
+            return 0
         log(f"  no node matched {wanted}; on screen:")
         for r in rows[:40]:
             log("    " + r)

@@ -46,15 +46,23 @@ sleep 25
 capture 01_first_screen
 
 say "walk through whatever stands in front of the phone screen"
-for i in 1 2 3 4 5 6; do
-    if $UI tap "got it" "ok" "agree and continue" "i agree" "accept" "continue" "confirm" "allow" "while using the app" "next"; then
+REACHED=0
+for i in $(seq 1 12); do
+    if $UI has "enter your phone number" "phone number" "verify your phone number" >/dev/null 2>&1; then
+        echo "  REACHED the phone-number screen at step $i"
+        REACHED=1
+        break
+    fi
+    if $UI tap "got it" "ok" "agree and continue" "i agree" "accept" "continue" "allow" "while using the app" "confirm" "next"; then
         sleep 4
         capture "02_step$i"
     else
-        echo "  nothing to advance on"
-        break
+        echo "  nothing to advance on at step $i"
+        sleep 5
+        capture "02_stuck_$i"
     fi
 done
+echo "reached_phone_screen=$REACHED" | tee "$OUT/reached.txt"
 capture 03_before_menu
 
 say "open the overflow menu"
@@ -78,6 +86,12 @@ for i in $(seq 1 6); do
     capture "06_watch_$i"
     adb shell dumpsys window 2>/dev/null | grep -E "mCurrentFocus" | head -1
 done
+
+say "network state""
+getent hosts g.whatsapp.net >/dev/null 2>&1 || true
+adb shell ping -c 2 -W 3 g.whatsapp.net 2>&1 | tail -3 | tee "$OUT/net.txt" || true
+adb shell "cat /proc/net/tcp /proc/net/tcp6 2>/dev/null | wc -l" >> "$OUT/net.txt" 2>&1 || true
+adb shell dumpsys connectivity 2>/dev/null | head -30 >> "$OUT/net.txt" || true
 
 say "collect"
 adb logcat -b crash -d > "$OUT/crash.txt" 2>&1 || true
