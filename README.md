@@ -1,9 +1,15 @@
 # walitex-prox-lab
 
-CI lane for **WA ProX** (the renamed, hardened WA LiteX clone) and for control builds of the shipped
-WA LiteX itself. The emulator answers questions the phone cannot: on the S24 Ultra a bugreport's
-`main` logcat buffer holds about one second, so anything the app logged a minute earlier is gone. An
-emulator gives a live `adb logcat` for the whole run.
+Ongoing engineering work on the **existing WA LiteX app** the user installed and linked. The app's
+original package identity (`com.whatsapp.litex`) and its current signing identity must be preserved;
+this repository is not a replacement product or a renamed-clone release path. Some historical
+notes/scripts from earlier clone experiments remain for reference, but they are not authority to
+change the current app identity. See [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) for the live
+acceptance criteria, verified results, and unresolved issues.
+
+The emulator answers questions the phone cannot: on the S24 Ultra a bugreport's `main` logcat buffer
+holds about one second, so anything the app logged a minute earlier is gone. An emulator gives a
+live `adb logcat` for the whole run. Emulator success is not treated as proof of S24 Ultra behavior.
 
 ## What lives here
 

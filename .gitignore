@@ -1,0 +1,24 @@
+# Local APKs and test/build outputs must not be committed.
+*.apk
+*.aab
+*.idsig
+artifacts/
+out/
+work/
+dist/
+build/
+
+# Signing and credential material (never store in this public repository).
+*.p12
+*.pfx
+*.jks
+*.keystore
+lineage.bin
+.env
+.env.*
+.secrets/
+
+# Local caches / editor noise.
+__pycache__/
+*.py[cod]
+.DS_Store
