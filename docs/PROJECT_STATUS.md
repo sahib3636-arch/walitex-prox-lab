@@ -104,6 +104,14 @@ This proves popup suppression alone does not make the calls feature work. Candid
 - This is still a diagnostic candidate, not approved for user installation. It suppresses the Premium banner and instruments preferences. Persistence is verified; actual call blocking and legitimate Premium entitlement are not.
 - The separate in-place-update probe over the original linked base passed in workflow `41220850995`; details and evidence are recorded above. The candidate remains diagnostic-only because actual call blocking is unverified.
 
+### Candidate `264207410` (native writer and banner retained; persistence passes, feature remains gated)
+
+- APK SHA-256: `bdba36bd7bf2b61619a3ec0c83a746d4145f4e1e71e8ac95c4e0dc7fe48415f2`
+- ZIP: `https://x0.at/f5pP.zip` (SHA-256 `705b7cd34bf9d1e751de16bab7225916e7c97a5df4ef200cad811f8ccde93f8b`)
+- Emulator workflow `41221349558` completed successfully. This build keeps the native `WaResources.setBoolean` writer and original Premium banner; only the guarded `0x6ff60` reset store is NOPed. The calls preference was true and row 5 stayed checked after cold reopen.
+- The Premium dialog still appears on tap, and while it is open the switch looks off. After closing/reopening the screen, the persisted preference displays on. Screenshots and details: `evidence/calls-switch-native-writer-candidate-264207410.txt` and two `.png` files.
+- This confirms persistence through the original native writer, **not** that incoming calls are blocked. The UI still presents the feature as Premium, so this candidate is not an unlock and is not approved for user installation.
+
 ## Earlier useful results
 
 - Candidate `264207403` was installed over the linked base by run `41215277866` (`adb install -r` succeeded). The first workflow reported failure only because the probe mixed XML and assertion text into one file. The probe was corrected and pushed as commit `f064eae`.
@@ -125,6 +133,7 @@ This proves popup suppression alone does not make the calls feature work. Candid
 - `evidence/calls-toggle-native-reset-candidate-264207408.txt` records the exact setter order, final false preference, and the guarded native reset-site hypothesis.
 - `evidence/calls-switch-persistent-candidate-264207409.txt` and `.png` record the successful emulator persistence test while clearly distinguishing it from actual call-block verification.
 - `evidence/in-place-update-candidate-264207409.txt` and `.png` record the exact `adb install -r` update and preserved preferences on API 31.
+- `evidence/calls-switch-native-writer-candidate-264207410.txt` and screenshots show that native preferences persist while the Premium dialog remains visible.
 
 ## Test/build policy
 

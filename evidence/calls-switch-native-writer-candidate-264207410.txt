@@ -1,0 +1,20 @@
+# Native-writer test with Premium banner retained — candidate 264207410
+
+**Workflow:** `41221349558` (completed successfully)  
+**APK SHA-256:** `bdba36bd7bf2b61619a3ec0c83a746d4145f4e1e71e8ac95c4e0dc7fe48415f2`  
+**ZIP:** `https://x0.at/f5pP.zip` (SHA-256 `705b7cd34bf9d1e751de16bab7225916e7c97a5df4ef200cad811f8ccde93f8b`)
+
+## Configuration and result
+
+This build enables the guarded arm64 reset-site NOP at VA `0x6ff60`, but retains the original native `WaResources.setBoolean` writer and original Premium banner callback. It has no setter/getter trace replacement and does not suppress the Premium dialog.
+
+After the handler ran, `litex_prefs.xml` contained `walitex_block_calls_check=true`; after a cold reopen, row 5 remained checked. Rows 0–4 also remained checked. This confirms the native writer receives/persists the requested checked state when the reset store is removed.
+
+The Premium dialog still appears on tap, and the switch looks off while that dialog is open. After the dialog/app is dismissed and the screen is reopened, the persisted setting makes the switch appear on again. Screenshots:
+
+- `premium-dialog-candidate-264207410.png` — dialog shown during the tap.
+- `calls-switch-persisted-after-dialog-candidate-264207410.png` — final reopened state.
+
+## Limits
+
+This is a preference/UI test only. The visible Premium dialog demonstrates the feature remains gated in the UI; no actual incoming WhatsApp call was used to verify call blocking. Candidate 264207410 is not approved as a user update or an unlock claim.
