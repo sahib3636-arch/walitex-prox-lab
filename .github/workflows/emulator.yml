@@ -21,8 +21,8 @@ on:
         default: scripts/probe.sh
 
 concurrency:
-  group: emulator-${{ github.ref }}-${{ github.event.inputs.driver }}
-  cancel-in-progress: true
+  group: emulator-${{ github.ref }}-${{ github.event.inputs.driver }}-${{ github.event.inputs.api_level }}
+  cancel-in-progress: false
 
 jobs:
   probe:
