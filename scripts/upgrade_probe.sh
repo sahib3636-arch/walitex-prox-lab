@@ -46,8 +46,12 @@ adb shell dumpsys package "$PKG" > "$OUT/package-after.txt"
 adb shell "cat /data/data/$PKG/shared_prefs/litex_prefs.xml" > "$OUT/prefs-after.xml"
 
 start_screen
-$UI dump "$OUT/toggles-after-update.txt" | tee "$OUT/toggles-after-update.txt"
+$UI dump "$OUT/toggles-after-update.xml" | tee "$OUT/toggles-after-update.txt"
 adb exec-out screencap -p > "$OUT/screen-after-update.png" 2>/dev/null || true
+
+# Record stable install identity/time fields for manual review even if an assertion below fails.
+grep -E 'userId=|firstInstallTime=|lastUpdateTime=|versionCode=|versionName=' "$OUT/package-before.txt" > "$OUT/package-before-summary.txt" || true
+grep -E 'userId=|firstInstallTime=|lastUpdateTime=|versionCode=|versionName=' "$OUT/package-after.txt" > "$OUT/package-after-summary.txt" || true
 
 # Fail closed if PackageManager did not complete an in-place update or the stored settings vanished.
 grep -q 'Success' "$OUT/upgrade-install.txt"
@@ -58,7 +62,4 @@ grep -q '2: checked=true' "$OUT/toggles-after-update.txt"
 
 echo 'IN_PLACE_INSTALL=PASS' | tee "$OUT/upgrade-result.txt"
 echo 'PREFS_PRESERVED=PASS' | tee -a "$OUT/upgrade-result.txt"
-# Record stable install identity/time fields for manual review.
-grep -E 'userId=|firstInstallTime=|lastUpdateTime=|versionCode=|versionName=' "$OUT/package-before.txt" > "$OUT/package-before-summary.txt" || true
-grep -E 'userId=|firstInstallTime=|lastUpdateTime=|versionCode=|versionName=' "$OUT/package-after.txt" > "$OUT/package-after-summary.txt" || true
 adb shell am force-stop "$PKG" >/dev/null 2>&1 || true
