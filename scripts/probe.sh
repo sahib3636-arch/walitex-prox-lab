@@ -6,7 +6,7 @@ export PATH="$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/late
 OUT=out
 mkdir -p "$OUT"
 UI="python3 scripts/ui.py"
-PKG=com.whatsapp.litey
+PKG="${CLONE_PKG:-com.whatsapp.litey}"
 MAIN=$PKG/com.whatsapp.litex.Main
 
 say() { echo; echo "===== $* ====="; }
