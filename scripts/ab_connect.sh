@@ -46,9 +46,11 @@ audit() {  # audit <tag> <package>
 
 echo "===== clone ====="
 adb install -r -g app.apk 2>&1 | tee "$OUT/install-clone.txt"
-adb shell am start -W -n com.whatsapp.litey/com.whatsapp.litex.Main 2>&1 | tee "$OUT/start-clone.txt"
+CLONE_PKG="${CLONE_PKG:-com.whatsapp.litey}"
+echo "clone package: $CLONE_PKG"
+adb shell am start -W -n "$CLONE_PKG/com.whatsapp.litex.Main" 2>&1 | tee "$OUT/start-clone.txt"
 sleep 15
-audit clone com.whatsapp.litey
+audit clone "$CLONE_PKG"
 
 echo "===== original ====="
 adb install -r -g original.apk 2>&1 | tee "$OUT/install-original.txt"

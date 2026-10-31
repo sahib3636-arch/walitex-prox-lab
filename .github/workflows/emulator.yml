@@ -23,6 +23,10 @@ on:
         description: driver script under scripts/
         required: false
         default: scripts/probe.sh
+      clone_pkg:
+        description: package name of the build under test
+        required: false
+        default: com.whatsapp.litey
       ipv6:
         description: keep IPv6 on, or 'off' to disable it on the emulator (forces the IPv4 path)
         required: false
@@ -87,7 +91,7 @@ jobs:
           emulator-options: >-
             -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
             -no-snapshot -camera-back none -camera-front none -netdelay none -netspeed full
-          script: DISABLE_IPV6='${{ github.event.inputs.ipv6 }}' bash ${{ github.event.inputs.driver || 'scripts/probe.sh' }}
+          script: DISABLE_IPV6='${{ github.event.inputs.ipv6 }}' CLONE_PKG='${{ github.event.inputs.clone_pkg }}' bash ${{ github.event.inputs.driver || 'scripts/probe.sh' }}
 
       - uses: actions/upload-artifact@v4
         if: always()
