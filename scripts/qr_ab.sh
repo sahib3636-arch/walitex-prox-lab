@@ -25,8 +25,14 @@ adb shell svc power stayon true || true
 run_case() {  # run_case <tag> <apk> <package>
     local tag="$1" apk="$2" pkg="$3"
     echo "===== $tag : $apk as $pkg ====="
-    adb shell pm uninstall "$pkg" >/dev/null 2>&1 || true
-    adb uninstall "$pkg" >/dev/null 2>&1 || true
+    # clear BOTH identities: a renamed build that keeps the original authorities (or account type)
+    # must not share the device with the vendor app, otherwise the test conflates coexistence with
+    # whatever the build itself broke.
+    for p in com.whatsapp.litex com.whatsapp.pxmod "${CLONE_PKG:-com.whatsapp.pxmod}"; do
+        adb shell pm uninstall "$p" >/dev/null 2>&1 || true
+        adb uninstall "$p" >/dev/null 2>&1 || true
+    done
+    adb shell pm list packages | grep -E "whatsapp" | tee "$OUT/packages-$tag-before.txt"
     adb install -r -g "$apk" 2>&1 | tee "$OUT/install-$tag.txt"
     adb logcat -c || true
     adb logcat -v threadtime > "$OUT/logcat-$tag.txt" 2>&1 &
