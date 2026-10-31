@@ -112,15 +112,19 @@ def main() -> int:
             for r in rows:
                 log("  " + r)
             return 0
+        # keyword-major: the order of the arguments is the priority order. A modal alert sits on
+        # top of the page it covers, and the covered button is still in the dump, so "first node
+        # that matches anything" can tap straight through an alert that has to be dismissed.
         wanted = [a.lower() for a in args]
-        for n in root.iter("node"):
-            for attr, v in labels(n):
-                lv = v.lower()
-                if any(w in lv for w in wanted):
+        for w in wanted:
+            for n in root.iter("node"):
+                for attr, v in labels(n):
+                    if w not in v.lower():
+                        continue
                     c = centre(n)
                     if not c:
                         continue
-                    log(f"  tap {attr}={v!r} at {c} for {wanted}")
+                    log(f"  tap {attr}={v!r} at {c} for {w!r}")
                     sh("adb", "shell", "input", "tap", str(c[0]), str(c[1]))
                     time.sleep(2)
                     return 0
