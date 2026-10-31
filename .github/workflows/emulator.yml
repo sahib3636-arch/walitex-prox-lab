@@ -68,9 +68,12 @@ jobs:
           mv "$(ls *.apk | head -1)" app.apk
           if [ -n "${{ github.event.inputs.original_url }}" ]; then
             curl -fL --retry 3 -o original.dl "${{ github.event.inputs.original_url }}"
-            if unzip -l original.dl >/dev/null 2>&1; then unzip -o -j original.dl '*.apk' -d .; else mv original.dl original.apk; fi
-            ls -la original*.apk
-            mv "$(ls original*.apk | head -1)" original.apk
+            if unzip -l original.dl >/dev/null 2>&1; then
+              mkdir -p orig_dl && unzip -o -j original.dl '*.apk' -d orig_dl && mv orig_dl/*.apk original.apk
+            else
+              mv original.dl original.apk
+            fi
+            ls -la original.apk
           fi
 
       - name: Boot the emulator and drive the app
