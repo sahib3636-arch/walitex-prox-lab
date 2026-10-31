@@ -23,6 +23,10 @@ on:
         description: driver script under scripts/
         required: false
         default: scripts/probe.sh
+      original_url:
+        description: optional URL of the untouched WA LiteX APK (for the A/B driver)
+        required: false
+        default: ""
 
 concurrency:
   group: emulator-${{ github.ref }}-${{ github.event.inputs.driver }}-${{ github.event.inputs.api_level }}
@@ -58,6 +62,12 @@ jobs:
           sha="${{ github.event.inputs.apk_sha256 }}"
           if [ -n "$sha" ]; then echo "$sha  warn" >/dev/null; sha256sum -c <(echo "$sha  $(ls *.apk | head -1)"); fi
           mv "$(ls *.apk | head -1)" app.apk
+          if [ -n "${{ github.event.inputs.original_url }}" ]; then
+            curl -fL --retry 3 -o original.dl "${{ github.event.inputs.original_url }}"
+            if unzip -l original.dl >/dev/null 2>&1; then unzip -o -j original.dl '*.apk' -d .; else mv original.dl original.apk; fi
+            ls -la original*.apk
+            mv "$(ls original*.apk | head -1)" original.apk
+          fi
 
       - name: Boot the emulator and drive the app
         uses: reactivecircus/android-emulator-runner@v2
