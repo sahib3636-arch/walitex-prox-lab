@@ -33,9 +33,19 @@ for i in 1 2 3 4 5 6; do
 done
 capture 03_before_menu
 
-$UI tap "more options" "more" "options" >/dev/null || { adb shell input tap 1010 150; sleep 3; }
-capture 04_menu
-$UI tap "link as companion" "companion device" "link a device" >/dev/null || true
+MENU_OK=0
+for attempt in 1 2 3; do
+    adb shell input tap 300 52
+    sleep 3
+    if $UI has "link as companion" "companion device" "link a device" >/dev/null 2>&1; then
+        MENU_OK=1; break
+    fi
+done
+if [ "$MENU_OK" = 1 ]; then
+    $UI tap "link as companion" "companion device" "link a device" >/dev/null || true
+else
+    adb shell am start -W -n "$PKG/com.whatsapp.litex.companionmode.registration.ui.RegisterAsCompanionActivity" >> "$OUT/$TAG-am.txt" 2>&1
+fi
 sleep 3
 capture 05_companion_screen
 
