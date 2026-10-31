@@ -24,7 +24,7 @@ sleep 25
 capture 01_first_screen
 
 for i in 1 2 3 4 5 6; do
-    if $UI tap "agree" "accept" "i agree" "continue" "confirm" "allow" "while using the app" "ok" "got it" "next" >/dev/null; then
+    if $UI tap "got it" "ok" "agree and continue" "i agree" "accept" "continue" "confirm" "allow" "while using the app" "next" >/dev/null; then
         sleep 4
         capture "02_step$i"
     else
