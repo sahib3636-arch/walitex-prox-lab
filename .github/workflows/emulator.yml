@@ -3,10 +3,14 @@ name: emulator-probe
 on:
   workflow_dispatch:
     inputs:
-      tag:
-        description: release tag that holds the .apk asset
+      apk_url:
+        description: URL of the APK (or a .zip containing one)
         required: true
-        default: apk-mf5probe
+        default: https://x0.at/BAAi.zip
+      apk_sha256:
+        description: expected sha256 of the APK (blank to skip)
+        required: false
+        default: e882e7dc7387112fea464419143c8932e84c72f031a47c6dba0d83c0fb42e4b3
       api_level:
         description: emulator API level
         required: false
@@ -15,11 +19,9 @@ on:
         description: driver script under scripts/
         required: false
         default: scripts/probe.sh
-  push:
-    branches: [main]
 
 concurrency:
-  group: emulator-${{ github.ref }}
+  group: emulator-${{ github.ref }}-${{ github.event.inputs.driver }}
   cancel-in-progress: true
 
 jobs:
@@ -37,16 +39,21 @@ jobs:
           sudo udevadm trigger --name-match=kvm
           ls -l /dev/kvm
 
-      - name: Fetch the APK from the release
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Fetch the APK
         run: |
+          set -eux
           mkdir -p out
-          tag="${{ github.event.inputs.tag || 'apk-mf5probe' }}"
-          echo "tag=$tag" | tee out/build.txt
-          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern '*.apk' --clobber -O app.apk
-          ls -la app.apk
-          sha256sum app.apk | tee -a out/build.txt
+          curl -fL --retry 3 --retry-delay 5 -o dl.bin "${{ github.event.inputs.apk_url }}"
+          if unzip -l dl.bin >/dev/null 2>&1; then
+            unzip -o -j dl.bin '*.apk' -d .
+          else
+            mv dl.bin app.apk
+          fi
+          ls -la *.apk
+          sha256sum *.apk | tee out/build.txt
+          sha="${{ github.event.inputs.apk_sha256 }}"
+          if [ -n "$sha" ]; then echo "$sha  warn" >/dev/null; sha256sum -c <(echo "$sha  $(ls *.apk | head -1)"); fi
+          mv "$(ls *.apk | head -1)" app.apk
 
       - name: Boot the emulator and drive the app
         uses: reactivecircus/android-emulator-runner@v2
