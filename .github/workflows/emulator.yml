@@ -70,7 +70,8 @@ jobs:
           sha256sum *.apk | tee out/build.txt
           sha="${{ github.event.inputs.apk_sha256 }}"
           if [ -n "$sha" ]; then echo "$sha  warn" >/dev/null; sha256sum -c <(echo "$sha  $(ls *.apk | head -1)"); fi
-          mv "$(ls *.apk | head -1)" app.apk
+          fetched_apk="$(ls *.apk | head -1)"
+          if [ "$fetched_apk" != "app.apk" ]; then mv "$fetched_apk" app.apk; fi
           if [ -n "${{ github.event.inputs.original_url }}" ]; then
             curl -fL --retry 8 --retry-delay 5 --retry-all-errors -C - -o original.dl "${{ github.event.inputs.original_url }}"
             if unzip -l original.dl >/dev/null 2>&1; then
