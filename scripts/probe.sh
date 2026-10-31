@@ -65,20 +65,41 @@ done
 echo "reached_phone_screen=$REACHED" | tee "$OUT/reached.txt"
 capture 03_before_menu
 
-say "open the overflow menu"
-$UI tap "more options" "more" "⋮" "options" || {
-    adb shell input tap 1010 150
-    sleep 3
-}
-capture 04_menu
+COMPANION_ACT=$PKG/com.whatsapp.litex.companionmode.registration.ui.RegisterAsCompanionActivity
+BOOTSTRAP_ACT=$PKG/com.whatsapp.litex.companionmode.registration.ui.CompanionBootstrapActivity
 
-say "tap Link as companion device"
-$UI tap "link as companion" "companion device" "link a device" || {
-    echo "  menu item not found; dumping menu"
-    $UI list 04_menu || true
-}
+say "open the overflow menu (retry: popups do not always land on the first tap)"
+MENU_OK=0
+for attempt in 1 2 3; do
+    adb shell input tap 300 52
+    sleep 3
+    $UI shot "04_menu_try$attempt" >/dev/null
+    if $UI has "link as companion" "companion device" "link a device" >/dev/null 2>&1; then
+        echo "  menu is open on attempt $attempt"
+        MENU_OK=1
+        $UI list "04_menu_try$attempt" || true
+        break
+    fi
+    echo "  no menu after attempt $attempt"
+    $UI list "04_menu_try$attempt" || true
+done
+
+if [ "$MENU_OK" = 1 ]; then
+    say "tap Link as companion device"
+    $UI tap "link as companion" "companion device" "link a device" || true
+else
+    say "menu never opened; starting the companion activity directly"
+    adb shell am start -W -n "$COMPANION_ACT" 2>&1 | tee "$OUT/am_start_companion.txt"
+fi
 sleep 3
 capture 05_companion_screen
+
+if ! $UI has "link with phone number" "point your phone" "scan" "QR" "connecting" >/dev/null 2>&1; then
+    say "companion screen not up; trying CompanionBootstrapActivity"
+    adb shell am start -W -n "$BOOTSTRAP_ACT" 2>&1 | tee "$OUT/am_start_bootstrap.txt"
+    sleep 3
+    capture 05b_companion_screen
+fi
 
 say "watch the linking screen for 90 s"
 for i in $(seq 1 6); do
@@ -87,7 +108,7 @@ for i in $(seq 1 6); do
     adb shell dumpsys window 2>/dev/null | grep -E "mCurrentFocus" | head -1
 done
 
-say "network state""
+say "network state"
 getent hosts g.whatsapp.net >/dev/null 2>&1 || true
 adb shell ping -c 2 -W 3 g.whatsapp.net 2>&1 | tail -3 | tee "$OUT/net.txt" || true
 adb shell "cat /proc/net/tcp /proc/net/tcp6 2>/dev/null | wc -l" >> "$OUT/net.txt" 2>&1 || true
@@ -107,5 +128,7 @@ grep -aE "PROX-PROBE|PROX-DBG|companion|FATAL|AndroidRuntime|WhatsApp|WaLog" "$O
 
 say "fatal exceptions (if any)"
 grep -a -A25 "FATAL EXCEPTION" "$OUT/logcat.txt" | head -80 | tee "$OUT/fatals.txt" || true
+
+exit 0
 
 echo "done"
