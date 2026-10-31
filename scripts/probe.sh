@@ -27,6 +27,16 @@ adb shell settings put global transition_animation_scale 0 || true
 adb shell settings put global animator_duration_scale 0 || true
 adb shell svc power stayon true || true
 
+if [ "${DISABLE_IPV6:-on}" = "off" ]; then
+    say "disable IPv6 so name resolution can only land on IPv4"
+    adb root >/dev/null 2>&1 || true
+    sleep 6
+    adb shell sysctl -w net.ipv6.conf.all.disable_ipv6=1 2>&1 | tee "$OUT/ipv6.txt"
+    adb shell sysctl -w net.ipv6.conf.wlan0.disable_ipv6=1 2>&1 | tee -a "$OUT/ipv6.txt"
+    adb shell ip -6 addr 2>&1 | head -10 | tee -a "$OUT/ipv6.txt"
+    sleep 2
+fi
+
 say "emulator"
 adb shell getprop ro.build.version.release
 adb shell getprop ro.product.cpu.abi
@@ -101,9 +111,9 @@ if ! $UI has "link with phone number" "point your phone" "scan" "QR" "connecting
     capture 05b_companion_screen
 fi
 
-say "watch the linking screen for 90 s"
-for i in $(seq 1 6); do
-    sleep 15
+say "watch the linking screen for 240 s"
+for i in $(seq 1 8); do
+    sleep 30
     capture "06_watch_$i"
     adb shell dumpsys window 2>/dev/null | grep -E "mCurrentFocus" | head -1
 done
