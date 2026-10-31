@@ -28,10 +28,15 @@ run_case() {  # run_case <tag> <apk> <package>
     # clear BOTH identities: a renamed build that keeps the original authorities (or account type)
     # must not share the device with the vendor app, otherwise the test conflates coexistence with
     # whatever the build itself broke.
-    for p in com.whatsapp.litex com.whatsapp.pxmod "${CLONE_PKG:-com.whatsapp.pxmod}"; do
-        adb shell pm uninstall "$p" >/dev/null 2>&1 || true
-        adb uninstall "$p" >/dev/null 2>&1 || true
-    done
+    if [ "${KEEP_OTHER:-0}" = "1" ]; then
+        adb shell pm uninstall "$pkg" >/dev/null 2>&1 || true
+        adb uninstall "$pkg" >/dev/null 2>&1 || true
+    else
+        for p in com.whatsapp.litex com.whatsapp.pxmod "${CLONE_PKG:-com.whatsapp.pxmod}"; do
+            adb shell pm uninstall "$p" >/dev/null 2>&1 || true
+            adb uninstall "$p" >/dev/null 2>&1 || true
+        done
+    fi
     adb shell pm list packages | grep -E "whatsapp" | tee "$OUT/packages-$tag-before.txt"
     adb install -r -g "$apk" 2>&1 | tee "$OUT/install-$tag.txt"
     adb logcat -c || true
