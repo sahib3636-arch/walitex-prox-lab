@@ -15,6 +15,10 @@ on:
         description: emulator API level
         required: false
         default: "33"
+      arch:
+        description: emulator arch (x86_64, or arm64-v8a for the fully emulated image)
+        required: false
+        default: x86_64
       driver:
         description: driver script under scripts/
         required: false
@@ -60,7 +64,7 @@ jobs:
         with:
           api-level: ${{ github.event.inputs.api_level || 33 }}
           target: google_apis
-          arch: x86_64
+          arch: ${{ github.event.inputs.arch || 'x86_64' }}
           force-avd-creation: false
           disable-animations: true
           emulator-options: >-
