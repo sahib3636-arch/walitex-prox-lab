@@ -17,18 +17,21 @@ adb shell settings put global window_animation_scale 0 || true
 adb shell settings put global transition_animation_scale 0 || true
 adb shell svc power stayon true || true
 
-audit() {  # audit <tag>
+audit() {  # audit <tag> <package>
     local tag="$1"
+    local uid
+    uid=$(adb shell dumpsys package "$2" 2>/dev/null | grep -m1 -o "userId=[0-9]*" | cut -d= -f2)
+    echo "package=$2 uid=$uid" | tee "$OUT/uid-$tag.txt"
     adb logcat -c || true
     adb logcat -v threadtime > "$OUT/logcat-$tag.txt" 2>&1 &
     local lp=$!
     sleep 1
     {
-        echo "=== sockets $tag"
+        echo "=== sockets $tag uid=$uid"
         for i in $(seq 1 18); do
             echo "--- sample $i $(date -u +%H:%M:%S)"
-            adb shell "cat /proc/net/tcp /proc/net/tcp6 2>/dev/null" | awk 'NR > 1 && $4 == "01"' |
-                awk '{ n = split($3, a, ":"); if (a[n] == "01BB") print "  ESTABLISHED->443  " $2 " -> " a[n-1] ":" a[n] }'
+            adb shell "cat /proc/net/tcp /proc/net/tcp6 2>/dev/null" |
+                awk -v uid="$uid" 'NR > 1 && $4 == "01" { n = split($3, a, ":"); if (a[n] == "01BB" && $8 == uid) print "  mine->443  " $2 " -> " a[n-1] ":" a[n] "  uid=" $8 }'
             sleep 4
         done
     } >> "$OUT/sockets-$tag.txt" 2>&1
