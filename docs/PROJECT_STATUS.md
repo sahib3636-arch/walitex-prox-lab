@@ -76,6 +76,13 @@ This candidate contains experimental tracing and is not a user-ready release. Th
 - Mic: the phone reports voice notes are silence/static. AudioSource variants 5, 6, 7, and 9 did not restore capture. The current linked-base patch changes the S24 Ultra non-Pixel branch to use `AudioSource.CAMCORDER`, but this is **not verified on the phone**.
 - Anti View Once: the candidate patch permits the ordinary open/read-receipt path while leaving retention/display behavior in place. Repeat-view/download behavior and the sender’s visible “Opened” status are **not verified**.
 
+## Durable project files
+
+- `tooling/linked_update/update_linked.py` and its local helpers preserve the in-place patch/build logic without storing the APK or signing key in Git.
+- `scripts/upgrade_probe.sh` is the corrected in-place update probe; commit `f064eae` fixed its earlier output-path false negative.
+- `scripts/mod_toggles.sh` now keeps full dialog-stack and toggle-state trace excerpts from diagnostic runs.
+- `evidence/premium-dialog-candidate-264207405.png` preserves the latest Premium-dialog failure screenshot.
+
 ## Test/build policy
 
 - Emulator runs are diagnostics, not proof of success on the S24 Ultra.

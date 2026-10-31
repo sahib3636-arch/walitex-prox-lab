@@ -6,7 +6,7 @@ on:
       apk_url:
         description: URL of the APK (or a .zip containing one)
         required: true
-        default: https://x0.at/BAAi.zip
+        default: https://x0.at/UW0H.zip
       apk_sha256:
         description: expected sha256 of the APK (blank to skip)
         required: false
@@ -14,7 +14,7 @@ on:
       api_level:
         description: emulator API level
         required: false
-        default: "33"
+        default: "31"
       arch:
         description: emulator arch (x86_64, or arm64-v8a for the fully emulated image)
         required: false
@@ -24,9 +24,9 @@ on:
         required: false
         default: scripts/probe.sh
       clone_pkg:
-        description: package name of the build under test
+        description: package name of the existing WA LiteX build under test
         required: false
-        default: com.whatsapp.litey
+        default: com.whatsapp.litex
       ipv6:
         description: keep IPv6 on, or 'off' to disable it on the emulator (forces the IPv4 path)
         required: false
@@ -37,7 +37,8 @@ on:
         default: ""
 
 concurrency:
-  group: emulator-${{ github.ref }}-${{ github.event.inputs.driver }}-${{ github.event.inputs.api_level }}
+  # Each dispatch owns an isolated emulator; use a unique group so different probes never cancel.
+  group: emulator-${{ github.workflow }}-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:

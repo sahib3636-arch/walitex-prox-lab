@@ -15,18 +15,24 @@ live `adb logcat` for the whole run. Emulator success is not treated as proof of
 
 | path | what |
 |---|---|
+| `docs/PROJECT_STATUS.md` | current user acceptance criteria, exact base identity, verified update results, failures, and open tests |
+| `docs/REPO_HYGIENE.md` | what belongs in the public repo and how to keep APKs, credentials, and signing material out |
+| `tooling/linked_update/` | linked-base in-place patch/build sources; requires the private base APK and signing identity outside Git |
 | `.github/workflows/emulator.yml` | boots an x86_64 or arm64 Android emulator, installs the APK from a URL input, runs a driver, uploads `out/` (screenshots, UI dumps, full logcat, crash buffer, socket samples) |
 | `scripts/ui.py` | uiautomator helper: `list`, `tap <labels…>` (keyword priority, exact label beats substring, clickable beats plain text), `has <labels…>`, `shot`, `key`, `raw` |
 | `scripts/probe.sh` | the linking driver: launch → clear the custom-ROM alert / EULA / permissions → phone-number screen → overflow menu (3 tries) → *Link as companion device*, or straight to the companion activity → 240 s watch |
+| `scripts/upgrade_probe.sh` | verifies an `adb install -r` update over the exact linked base and checks package identity/preferences |
+| `scripts/mod_toggles.sh` | taps every privacy switch, captures persistence/modal screenshots, and preserves diagnostic log traces |
 | `scripts/drive_one.sh` | the same walk for one package, for A/B runs |
-| `scripts/compare.sh` | untouched LiteX and the clone, same emulator, same minute |
-| `scripts/ab_connect.sh` | launches each build and samples `/proc/net/tcp{,6}` by uid, to compare who keeps a socket to `:443` open |
+| `scripts/compare.sh` | historical control/clone comparison helper; not the current release path |
+| `scripts/ab_connect.sh` | launches builds and samples `/proc/net/tcp{,6}` by uid, for connection diagnostics |
 
 ## Notes that cost time to learn
 
 * **Private repos on this GitHub account cannot run Actions** ("recent account payments have failed
-  or your spending limit needs to be increased"), so this repo is public. No APK is stored here —
-  the workflow pulls the build from the `apk_url` input at run time.
+  or your spending limit needs to be increased"), so this repo is public. No APK or signing material
+  is stored here — the workflow pulls the test build from `apk_url`, and the private linked base/key
+  stay in the authorized local build environment.
 * **API level matters for the ABI**: the APK ships arm64 libraries only. `api-level: 33`,
   target `google_apis` has no ARM translation and fails with
   `INSTALL_FAILED_NO_MATCHING_ABIS`; **api 30/31 google_apis x86_64** do translate ARM and the app
