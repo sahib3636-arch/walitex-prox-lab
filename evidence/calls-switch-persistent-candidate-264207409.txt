@@ -1,0 +1,28 @@
+# Calls-switch persistence test — candidate 264207409
+
+**Build:** diagnostic candidate based on the exact linked `mf9mic` APK  
+**APK SHA-256:** `b6aec8055a8902c7386514cd0f38096e51b92e83e1e5fbe8a1bc865e1f8c4587`  
+**Diagnostic ZIP:** `https://x0.at/Z009.zip` (SHA-256 `a6e6cda5e0c778eee5322054c002f3893e862f1bd9a02f92f1d39684271ae056`)  
+**Emulator workflow:** `41220312147` — completed successfully
+
+## Tested result
+
+This diagnostic build combines candidate 408's preference/getter logging and Premium-banner suppression with a guarded four-byte AArch64 `NOP` at `Listener$Switch.onCheckedChanged` VA `0x6ff60`.
+
+The test's relevant `logcat` sequence was:
+
+```text
+ProXGetPrm: 55501
+ProXSetBoolean: walitex_block_calls_check=true
+ProXSetBoolean: walitex_block_calls_check=true
+```
+
+There was no second `false` write. After the harness closed/reopened the privacy screen, row 5 remained checked and `litex_prefs.xml` contained `walitex_block_calls_check=true`. Rows 0–4 also remained checked. The screenshot `calls-switch-persistent-candidate-264207409.png` captures the reopened screen.
+
+`SoLoader` reported the app's `/lib/arm64` library directory in the x86_64 emulator. This means the test exercised the patched ARM64 `liblitex.so`, not the unpatched 32-bit ARM library.
+
+## Limits
+
+This verifies persistence of the setting through a cold screen/app reopen in the emulator. The banner was deliberately suppressed and the setter/getter were instrumented. **It does not verify that incoming WhatsApp voice/video calls are actually blocked, that Premium is legitimately entitled, or that the feature is unlocked.** Candidate 264207409 is diagnostic-only and is not approved as a user update.
+
+A first dispatch, run `41220244459`, stopped before starting the emulator because the archive contained `app.apk` and the workflow tried to move `app.apk` onto itself. This was a test-harness packaging bug, not an APK failure; fixed in commit `981d5ae`, after which run `41220312147` completed.

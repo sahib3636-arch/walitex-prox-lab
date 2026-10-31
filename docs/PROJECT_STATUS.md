@@ -88,12 +88,15 @@ This proves popup suppression alone does not make the calls feature work. Candid
 - Evidence: `evidence/calls-toggle-native-reset-candidate-264207408.txt`.
 - Native disassembly identifies the second false write at VA `0x6ff60`: `sturb wzr, [x29, #-0x28]`. The same JNI boolean slot had first been loaded from the checked state at `0x6fe08` (`sturb w21, [x29, #-0x28]`). This is the specific reset site to test; it is not evidence that the paid feature is unlocked.
 
-### Diagnostic candidate `264207409` (native reset-site test; workflow pending)
+### Diagnostic candidate `264207409` (native reset-site persistence test passed; feature unverified)
 
 - APK SHA-256: `b6aec8055a8902c7386514cd0f38096e51b92e83e1e5fbe8a1bc865e1f8c4587`
 - Diagnostic ZIP: `https://x0.at/Z009.zip` (SHA-256 `a6e6cda5e0c778eee5322054c002f3893e862f1bd9a02f92f1d39684271ae056`)
-- Patches only the verified native store at VA `0x6ff60` to NOP, with the builder refusing to patch if the ELF mapping or expected instructions differ. It retains write/getter logging and suppresses the Premium banner only for this local emulator test.
-- This is still a diagnostic candidate, not for user installation. A passing preference-persistence check would not by itself prove calls are blocked.
+- Workflow `41220312147` completed successfully. The trace shows `getPrm(55501)`, followed by two `walitex_block_calls_check=true` writes and no false reset. After reopening, row 5 remained checked and the preference remained true; rows 0–4 also remained checked. `SoLoader` confirms the emulator loaded the patched `/lib/arm64` native library.
+- Run `41220244459` failed before emulator startup due to a test-workflow self-move when a ZIP member was already named `app.apk`; fixed in commit `981d5ae`. The corrected rerun is `41220312147`.
+- Screenshot and exact evidence: `evidence/calls-switch-persistent-candidate-264207409.png` and `.txt`.
+- This is still a diagnostic candidate, not approved for user installation. It suppresses the Premium banner and instruments preferences. Persistence is verified; actual call blocking and legitimate Premium entitlement are not.
+- A separate in-place-update probe over the original linked base is running as workflow `41220850995`; the result is not yet known.
 
 ## Earlier useful results
 
@@ -114,6 +117,7 @@ This proves popup suppression alone does not make the calls feature work. Candid
 - `scripts/mod_toggles.sh` now keeps full dialog-stack and toggle-state trace excerpts from diagnostic runs.
 - `evidence/premium-dialog-candidate-264207405.png` preserves the earlier Premium-dialog failure screenshot.
 - `evidence/calls-toggle-native-reset-candidate-264207408.txt` records the exact setter order, final false preference, and the guarded native reset-site hypothesis.
+- `evidence/calls-switch-persistent-candidate-264207409.txt` and `.png` record the successful emulator persistence test while clearly distinguishing it from actual call-block verification.
 
 ## Test/build policy
 
