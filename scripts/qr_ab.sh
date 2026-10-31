@@ -68,6 +68,7 @@ run_case() {  # run_case <tag> <apk> <package>
 case1_pkg="${CASE1_PKG:-com.whatsapp.litex}"
 case2_pkg="${CLONE_PKG:-com.whatsapp.pxmod}"
 run_case case1 app.apk      "$case1_pkg"
+if [ "${SINGLE:-0}" = "1" ]; then echo "single-case mode"; echo done; exit 0; fi
 run_case case2 original.apk "$case2_pkg"
 
 echo done
