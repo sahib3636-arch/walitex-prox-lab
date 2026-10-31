@@ -70,12 +70,15 @@ The `getPrm(55501/55502)` return-value hypothesis and a local replacement for `L
 - The `WaResources.getAlertDialog` stack trace identifies `Extra.setPrmBanner(Native Method)` called by `Listener$Switch.onCheckedChanged(Native Method)` as the actual Premium-dialog path. See `evidence/dialog-callstack-candidate-264207406.txt`.
 - Row 5 still ended off. The temporary wrapper and native callback were diagnostic-only; this is not a release.
 
-### Candidate `264207407` (local feature test; validation in progress)
+### Candidate `264207407` (local feature test; failed persistence)
 
 - APK SHA-256: `8751725f01ccbd99a0c66517467e9feaba006f1d57758fcfafadf706f12f1b9f`
 - ZIP: `https://x0.at/Hwfi.zip`
-- It suppresses `Extra.setPrmBanner` for a local emulator test. This only removes the popup and does not prove that call blocking works. Do not install it on the user's phone.
-- Toggle run `41218735895` is in progress; collect `/home/user/runs/mod12/` and update this status with the observed row/prefs result.
+- It suppresses `Extra.setPrmBanner` for a local emulator test. The popup disappears and row 5 looks checked immediately after the tap, but after reopening the screen row 5 is off; `walitex_block_calls_check` remains false.
+- Run `41218735895` completed successfully. The `ProXSetPrmBanner` tag confirms the intercepted callback ran. `final.txt` and `litex_prefs.xml` show the calls switch did not persist.
+- Screenshot evidence: `evidence/premium-switch-transient-candidate-264207407.png`.
+
+This proves popup suppression alone does not make the calls feature work. Candidate `264207407` is diagnostic-only and must not be installed on the user's phone. Next, instrument `WaResources.setBoolean` and `PrmHandler.getPrm` to capture the exact key/value and premium decision made by the native listener.
 
 ## Earlier useful results
 

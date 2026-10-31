@@ -51,6 +51,8 @@ REPORT = PKGDIR / 'report' / f'update-{TARGET_VERSION}.json'
 DIAG_TOGGLE = os.environ.get('PROX_DIAG_TOGGLE', '0') == '1'
 TRACE_DIALOGS = os.environ.get('PROX_TRACE_DIALOGS', '0') == '1'
 SUPPRESS_PRM_BANNER = os.environ.get('PROX_SUPPRESS_PRM_BANNER', '0') == '1'
+DIAG_SET_BOOLEAN = os.environ.get('PROX_DIAG_SET_BOOLEAN', '0') == '1'
+DIAG_GET_PRM = os.environ.get('PROX_DIAG_GET_PRM', '0') == '1'
 SMALI_CP = ':'.join(f'/usr/share/java/{j}.jar' for j in
                     ('baksmali','smali','dexlib2','smali-util','guava'))
 API_LEVEL = '23'
@@ -159,6 +161,67 @@ P06_NEW = '''.method public static getPrm(I)Ljava/lang/Object;
     :expiry
     const-string v0, "365"
     return-object v0
+.end method'''
+
+P06_DIAG_NEW = '''.method public static getPrm(I)Ljava/lang/Object;
+    .registers 4
+
+    invoke-static {p0}, Ljava/lang/Integer;->toString(I)Ljava/lang/String;
+    move-result-object v1
+    const-string v0, "ProXGetPrm"
+    invoke-static {v0, v1}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+    move-result v2
+
+    const v0, 0xd8cf
+    if-eq p0, v0, :expiry
+
+    const v0, 0xd8cd
+    if-eq p0, v0, :premium
+
+    const v0, 0xd8ce
+    if-eq p0, v0, :premium
+
+    const/4 v0, 0x0
+    return-object v0
+
+    :premium
+    sget-object v0, Ljava/lang/Boolean;->TRUE:Ljava/lang/Boolean;
+    return-object v0
+
+    :expiry
+    const-string v0, "365"
+    return-object v0
+.end method'''
+
+SET_BOOLEAN_DIAG = '''.method public static setBoolean(Ljava/lang/String;Z)V
+    .registers 8
+
+    new-instance v0, Ljava/lang/StringBuilder;
+    invoke-direct {v0}, Ljava/lang/StringBuilder;-><init>()V
+    invoke-virtual {v0, p0}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    move-result-object v0
+    const-string v1, "="
+    invoke-virtual {v0, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    move-result-object v0
+    invoke-virtual {v0, p1}, Ljava/lang/StringBuilder;->append(Z)Ljava/lang/StringBuilder;
+    move-result-object v0
+    invoke-virtual {v0}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+    move-result-object v0
+    const-string v1, "ProXSetBoolean"
+    invoke-static {v1, v0}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+    move-result v2
+
+    invoke-static {}, Llitex/WaResources;->getSharedPreferences()Landroid/content/SharedPreferences;
+    move-result-object v3
+    if-eqz v3, :done
+    invoke-interface {v3}, Landroid/content/SharedPreferences;->edit()Landroid/content/SharedPreferences$Editor;
+    move-result-object v3
+    invoke-interface {v3, p0, p1}, Landroid/content/SharedPreferences$Editor;->putBoolean(Ljava/lang/String;Z)Landroid/content/SharedPreferences$Editor;
+    move-result-object v3
+    invoke-interface {v3}, Landroid/content/SharedPreferences$Editor;->apply()V
+
+    :done
+    return-void
 .end method'''
 
 GET_ALERT_DIALOG_DIAG = '''.method public static getAlertDialog(Landroid/content/Context;)Landroid/app/AlertDialog$Builder;
@@ -316,7 +379,8 @@ def patch_classes14(dex_path, out_path):
     old_method = text[start:end]
     if '0xd8cd' not in old_method or '0xd8ce' not in old_method or 'Boolean;->TRUE' not in old_method:
         raise RuntimeError('PrmHandler.getPrm no longer matches the verified P06 base')
-    text = text[:start] + P06_NEW + text[end:]
+    get_prm_method = P06_DIAG_NEW if DIAG_GET_PRM else P06_NEW
+    text = text[:start] + get_prm_method + text[end:]
     prm.write_text(text)
 
     switch = smali_dir / 'litex' / 'bridge' / 'Listener$Switch.smali'
@@ -363,6 +427,11 @@ def patch_classes14(dex_path, out_path):
         raise RuntimeError('WaResources.getAlertDialog native anchor missing')
     if TRACE_DIALOGS:
         wtxt = wtxt.replace(old_dialog, GET_ALERT_DIALOG_DIAG, 1)
+    old_set = '.method public static native setBoolean(Ljava/lang/String;Z)V\n.end method'
+    if wtxt.count(old_set) != 1:
+        raise RuntimeError('WaResources.setBoolean native anchor missing')
+    if DIAG_SET_BOOLEAN:
+        wtxt = wtxt.replace(old_set, SET_BOOLEAN_DIAG, 1)
     old_get = '.method public static native getBoolean(Ljava/lang/String;Z)Z\n.end method'
     if wtxt.count(old_get) != 1:
         raise RuntimeError('WaResources.getBoolean native anchor missing')
@@ -394,6 +463,8 @@ def patch_classes14(dex_path, out_path):
     stxt = (check_dir/'litex'/'bridge'/'Listener$Switch.smali').read_text()
     if 'const-string v0, "365"' not in ptxt or '0xd8cf' not in ptxt or 'Boolean;->TRUE' not in ptxt:
         raise RuntimeError('rebuilt PrmHandler missing verified Boolean/String contracts')
+    if DIAG_GET_PRM and 'ProXGetPrm' not in ptxt:
+        raise RuntimeError('diagnostic PrmHandler logging is missing')
     if stxt.count('disablePrivacySwitchSaving') != 3 or 'setSaveEnabled(Z)V' not in stxt:
         raise RuntimeError('rebuilt switch-state helper missing or call count wrong')
     if '.method public static native onCheckedCase22' not in stxt:
@@ -401,6 +472,11 @@ def patch_classes14(dex_path, out_path):
     wtxt_check = (check_dir/'litex'/'WaResources.smali').read_text()
     if 'SharedPreferences;->getBoolean' not in wtxt_check or '.method public static native getBoolean' in wtxt_check:
         raise RuntimeError('rebuilt WaResources.getBoolean is not the Java preference implementation')
+    if DIAG_SET_BOOLEAN:
+        if 'ProXSetBoolean' not in wtxt_check or '.method public static native setBoolean' in wtxt_check:
+            raise RuntimeError('diagnostic setBoolean implementation is missing')
+    elif '.method public static native setBoolean' not in wtxt_check:
+        raise RuntimeError('native WaResources.setBoolean should be retained outside diagnostics')
     if TRACE_DIALOGS:
         if 'ProXDialogTrace' not in wtxt_check or '.method public static native getAlertDialog' in wtxt_check:
             raise RuntimeError('rebuilt WaResources.getAlertDialog diagnostic wrapper missing')
@@ -417,7 +493,10 @@ def patch_classes14(dex_path, out_path):
                 premium_dialog_trace=('Java stack logging; native callback retained; diagnostic only'
                                      if TRACE_DIALOGS else 'native dialog helper retained'),
                 premium_banner=('suppressed for local feature test; diagnostic only'
-                                if SUPPRESS_PRM_BANNER else 'native banner retained'))
+                                if SUPPRESS_PRM_BANNER else 'native banner retained'),
+                set_boolean=('direct SharedPreferences writer with diagnostics'
+                             if DIAG_SET_BOOLEAN else 'native writer retained'),
+                get_prm_trace=DIAG_GET_PRM)
 
 
 def patch_version(manifest, new_version):

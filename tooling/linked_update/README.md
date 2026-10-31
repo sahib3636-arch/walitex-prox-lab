@@ -22,6 +22,8 @@ Dependencies include Python 3, Java, the Android SDK `aapt`, `zipalign`, and `ap
 - `PROX_DIAG_TOGGLE=1` adds preference-read and switch-constructor logging.
 - `PROX_TRACE_DIALOGS=1` replaces `WaResources.getAlertDialog` with a temporary stack-tracing wrapper.
 - `PROX_SUPPRESS_PRM_BANNER=1` suppresses `Extra.setPrmBanner` for a local calls-switch test; this only removes the popup and does not prove the feature works.
+- `PROX_DIAG_SET_BOOLEAN=1` replaces the native Boolean writer with a direct SharedPreferences writer and logs every key/value write.
+- `PROX_DIAG_GET_PRM=1` logs premium getter IDs while preserving the local `getPrm` return values.
 
 Both are **diagnostic-only** and must be disabled for any release build unless the underlying behavior is independently validated and the patch is deliberately retained.
 
