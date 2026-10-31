@@ -53,6 +53,9 @@ $UI dump "$OUT/final.xml" | tee "$OUT/final.txt"
 
 adb shell "cat /data/data/$PKG/shared_prefs/litex_prefs.xml" > "$OUT/litex_prefs.xml" 2>&1
 grep -iE "premium|prm" "$OUT/logcat.txt" | grep -v "walitex_premium_id" | head -40 > "$OUT/premium-log.txt"
+# Preserve full diagnostic call stacks from trace builds; a single grep line would omit frames.
+grep -n -A40 -B2 -E 'ProXDialogTrace|ProXCase22' "$OUT/logcat.txt" > "$OUT/dialog-trace.txt" || true
+grep -n -E 'ProXToggleRead|ProXSwitchState' "$OUT/logcat.txt" > "$OUT/toggle-trace.txt" || true
 wc -l < "$OUT/premium-log.txt"
 
 kill $LP 2>/dev/null || true
