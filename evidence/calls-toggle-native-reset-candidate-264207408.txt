@@ -1,0 +1,33 @@
+# Calls-switch native reset trace — candidate 264207408
+
+**Workflow:** `41219372357` (completed successfully; acceptance test failed)  
+**APK SHA-256:** `08b40a530163798784e5cd32565a29825e3e1b6433294256cd6a5c54a4f148e5`  
+**Diagnostic ZIP:** `https://x0.at/elaN.zip`  
+**ZIP SHA-256:** `13c24339ed55b0796dec257fc1ad5cecebaa47f7f45584227b05ea9f15f3989d`
+
+## Emulator evidence
+
+Relevant `logcat` sequence from `/home/user/runs/mod13/logcat.txt`:
+
+```text
+10-31 16:26:28.133 I ProXGetPrm: 55501
+10-31 16:26:28.133 I ProXSetBoolean: walitex_block_calls_check=true
+10-31 16:26:28.134 I ProXSetBoolean: walitex_block_calls_check=false
+10-31 16:26:28.134 I ProXSetPrmBanner: premium banner suppressed for local feature test
+```
+
+After reopening the privacy screen, row 5 was off. `/home/user/runs/mod13/litex_prefs.xml` contained `walitex_block_calls_check=false`; rows 0–4 remained on. This candidate did **not** unlock the calls feature.
+
+## Native control-flow finding
+
+In the exact linked-base `lib/arm64-v8a/liblitex.so`, `Listener$Switch.onCheckedChanged` includes:
+
+```text
+0x6fe08  sturb w21, [x29, #-0x28]   ; first setter gets the requested checked state
+...
+0x6ff58  stur  x21, [x29, #-0x30]   ; second setter's key
+0x6ff60  sturb wzr, [x29, #-0x28]   ; overwrites the same boolean argument with false
+0x6ff64  blr   x8                    ; invokes the setter
+```
+
+The runtime's `true` then `false` writes match this sequence. The next diagnostic candidate replaces only the four-byte instruction at VA `0x6ff60` with AArch64 `NOP`; this should leave the prior checked value in that JNI argument slot. This is a narrowly scoped persistence hypothesis, not a feature-unlock claim. It will be accepted only if candidate 264207409 shows the checked preference surviving a cold reopen; the actual call-blocking behavior still needs separate verification.

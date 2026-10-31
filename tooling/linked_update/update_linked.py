@@ -2,8 +2,9 @@
 """Build an in-place successor to the exact linked mf9mic APK.
 
 Inputs are anchored to the APK the user installed and linked, not a repackaged/recreated app. The
-update changes only AndroidManifest.xml and three dex files, retains package/name/permissions, uses
-that release's signing key/lineage, and increments versionCode by one.
+update retains package/name/permissions, uses that release's signing key/lineage, and increments
+versionCode by one. Depending on diagnostic flags, it changes the manifest, three dex files, and/or
+one verified arm64 native instruction in the original liblitex.so.
 
 Patches in this candidate:
   * classes12 / LX.Pyx.A02: on non-Pixel devices, ignore the 0x34b3 recorder-source override and
@@ -21,12 +22,17 @@ Patches in this candidate:
     Premium-dialog caller; it is diagnostic-only and must not ship.
   * classes14 / Extra.setPrmBanner: optionally suppress this dialog-producing callback for a local
     feature test. This does not by itself prove that the paid feature works and is diagnostic-only.
+  * lib/arm64-v8a/liblitex.so: after candidate 408 traced the calls-toggle callback writing the
+    requested value and then overwriting it with false, optionally NOP the verified false-argument
+    store at VA 0x6ff60. This preserves the first requested boolean in the JNI argument buffer; the
+    branch and native callback otherwise remain intact. This is a narrow, diagnostic-gated patch.
   * classes6: let the normal view-once-open/read-receipt path run even when Anti View Once is on,
     while leaving the anti-view-once retention/display code intact.
 
 Every DEX code edit is a one-code-unit binary change with DEX SHA-1/Adler32 repair; classes14 is
-reassembled because it needs a small Java helper. Hardware mic capture and sender-side receipt
-visibility still require a real linked-device test.
+reassembled because it needs small Java helpers. The optional native edit is guarded by exact ELF,
+VA-to-file-offset, and Capstone instruction checks. Hardware mic capture, real call blocking, and
+sender-side receipt visibility still require a real linked-device test.
 """
 from __future__ import annotations
 import hashlib
@@ -40,6 +46,7 @@ import time
 import zipfile
 import zlib
 from pathlib import Path
+from capstone import Cs, CS_ARCH_ARM64, CS_MODE_ARM
 
 ROOT = Path(os.environ.get('PROX_ROOT', str(Path.home())))
 PKGDIR = Path(os.environ.get('PROX_BUILD_DIR', str(ROOT / 'prox-build')))
@@ -53,6 +60,7 @@ TRACE_DIALOGS = os.environ.get('PROX_TRACE_DIALOGS', '0') == '1'
 SUPPRESS_PRM_BANNER = os.environ.get('PROX_SUPPRESS_PRM_BANNER', '0') == '1'
 DIAG_SET_BOOLEAN = os.environ.get('PROX_DIAG_SET_BOOLEAN', '0') == '1'
 DIAG_GET_PRM = os.environ.get('PROX_DIAG_GET_PRM', '0') == '1'
+PATCH_PREMIUM_SWITCH_RESET = os.environ.get('PROX_PATCH_PREMIUM_SWITCH_RESET', '0') == '1'
 SMALI_CP = ':'.join(f'/usr/share/java/{j}.jar' for j in
                     ('baksmali','smali','dexlib2','smali-util','guava'))
 API_LEVEL = '23'
@@ -350,6 +358,66 @@ def patch_many(data, patches):
     return out, report
 
 
+def _elf64_load_offset(data, va):
+    if len(data) < 64 or data[:4] != b'\x7fELF' or data[4] != 2 or data[5] != 1:
+        raise RuntimeError('liblitex.so is not a little-endian ELF64 object')
+    machine = struct.unpack_from('<H', data, 18)[0]
+    if machine != 183:
+        raise RuntimeError(f'liblitex.so is not AArch64 (e_machine={machine})')
+    phoff = struct.unpack_from('<Q', data, 32)[0]
+    phentsize = struct.unpack_from('<H', data, 54)[0]
+    phnum = struct.unpack_from('<H', data, 56)[0]
+    if phentsize < 56 or phoff + phentsize * phnum > len(data):
+        raise RuntimeError('liblitex.so has invalid ELF64 program headers')
+    for i in range(phnum):
+        p_type, p_flags, p_offset, p_vaddr, _, p_filesz, _, _ = struct.unpack_from(
+            '<IIQQQQQQ', data, phoff + i * phentsize)
+        if p_type == 1 and p_flags & 1 and p_vaddr <= va < p_vaddr + p_filesz:
+            return p_offset + va - p_vaddr
+    raise RuntimeError(f'VA {va:#x} is not covered by an executable PT_LOAD file range')
+
+
+def _native_instruction(data, va):
+    off = _elf64_load_offset(data, va)
+    insns = list(Cs(CS_ARCH_ARM64, CS_MODE_ARM).disasm(data[off:off+4], va))
+    if len(insns) != 1 or insns[0].address != va or insns[0].size != 4:
+        raise RuntimeError(f'cannot decode one AArch64 instruction at VA {va:#x}')
+    return off, insns[0]
+
+
+def patch_premium_switch_reset(data):
+    # This is the exact two-write sequence observed in candidate 408. The first JNI write carries
+    # the requested checked value; later, the callback rewrites the same jvalue slot with zero.
+    # NOPing only the latter store leaves the original requested value in place for the second write.
+    sentinel_va = 0x6fe08
+    reset_va = 0x6ff60
+    _, sentinel = _native_instruction(data, sentinel_va)
+    if (sentinel.mnemonic, sentinel.op_str) != ('sturb', 'w21, [x29, #-0x28]'):
+        raise RuntimeError(f'unexpected first switch-value store at {sentinel_va:#x}: '
+                           f'{sentinel.mnemonic} {sentinel.op_str}')
+    off, old = _native_instruction(data, reset_va)
+    if (old.mnemonic, old.op_str) != ('sturb', 'wzr, [x29, #-0x28]'):
+        raise RuntimeError(f'unexpected premium reset store at {reset_va:#x}: '
+                           f'{old.mnemonic} {old.op_str}')
+    _, call = _native_instruction(data, reset_va + 4)
+    if (call.mnemonic, call.op_str) != ('blr', 'x8'):
+        raise RuntimeError(f'unexpected instruction after reset store: {call.mnemonic} {call.op_str}')
+    patched = bytearray(data)
+    struct.pack_into('<I', patched, off, 0xd503201f)  # AArch64 NOP
+    out = bytes(patched)
+    _, new = _native_instruction(out, reset_va)
+    if (new.mnemonic, new.op_str) != ('nop', ''):
+        raise RuntimeError('native premium-reset patch did not disassemble to NOP')
+    changes = [i for i, (a, b) in enumerate(zip(data, out)) if a != b]
+    if len(out) != len(data) or any(not (off <= i < off + 4) for i in changes):
+        raise RuntimeError(f'native patch changed bytes outside one instruction: {changes[:12]}')
+    return out, dict(label='preserve requested calls-switch boolean across native premium reset',
+                     va=hex(reset_va), file_offset=hex(off),
+                     old=f'{old.mnemonic} {old.op_str}', new=f'{new.mnemonic}',
+                     preserved_value_va=hex(sentinel_va), sentinel=f'{sentinel.mnemonic} {sentinel.op_str}',
+                     changed_file_bytes=[hex(i) for i in changes])
+
+
 def check_code_unit(data, cls, meth, code_unit, expected, label):
     hits = mic_patch.find_method(data, mic_patch.header(data), cls, meth)
     if len(hits) != 1:
@@ -529,8 +597,11 @@ def repack(source, replacements, out):
     if stage.exists(): shutil.rmtree(stage)
     stage.mkdir(parents=True)
     for name, data in replacements.items():
-        (stage/name).write_bytes(data)
-    run(['zip','-q','-X','-j',str(out)] + [str(stage/name) for name in replacements])
+        target=stage/name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+    # Preserve exact APK paths, including native libraries under lib/arm64-v8a/.
+    run(['zip','-q','-X',str(out)] + list(replacements), cwd=stage)
     with zipfile.ZipFile(out) as z:
         sigs=[n for n in z.namelist() if n.startswith('META-INF/') and n.upper().endswith(('.SF','.RSA','.DSA','.EC','MANIFEST.MF'))]
     if sigs:
@@ -545,6 +616,11 @@ def main():
     base_sha=sha(SRC)
     with zipfile.ZipFile(SRC) as z:
         blobs={n:z.read(n) for n in ('classes6.dex','classes12.dex','classes14.dex','AndroidManifest.xml')}
+        native_switch_report=[]
+        if PATCH_PREMIUM_SWITCH_RESET:
+            native_lib, native_switch_info = patch_premium_switch_reset(z.read('lib/arm64-v8a/liblitex.so'))
+            blobs['lib/arm64-v8a/liblitex.so'] = native_lib
+            native_switch_report.append(native_switch_info)
     ver_before=int(run(['aapt','dump','badging',str(SRC)]).split("versionCode='")[1].split("'")[0])
     if ver_before >= TARGET_VERSION:
         raise RuntimeError(f'base versionCode {ver_before} is not lower than target {TARGET_VERSION}')
@@ -570,6 +646,8 @@ def main():
         raise RuntimeError(f'AXML versionCode {old_version} disagrees with aapt {ver_before}')
 
     replacements={'classes6.dex':d6,'classes12.dex':d12,'classes14.dex':d14_out.read_bytes(),'AndroidManifest.xml':manifest}
+    if PATCH_PREMIUM_SWITCH_RESET:
+        replacements['lib/arm64-v8a/liblitex.so'] = blobs['lib/arm64-v8a/liblitex.so']
     unsigned=WORK/'unsigned.apk'
     repack(SRC,replacements,unsigned)
     aligned=WORK/'aligned.apk'
@@ -582,6 +660,8 @@ def main():
     changed=sorted(k for k in a if k in b and a[k]!=b[k])
     allowed={'classes6.dex','classes12.dex','classes14.dex','AndroidManifest.xml',
              'META-INF/MANIFEST.MF','META-INF/PROX-MOD.RSA','META-INF/PROX-MOD.SF'}
+    if PATCH_PREMIUM_SWITCH_RESET:
+        allowed.add('lib/arm64-v8a/liblitex.so')
     extra=sorted(set(changed)-allowed)
     if extra: raise RuntimeError(f'unexpected APK entries changed: {extra}')
     bad=run(['zipalign','-c','-p','4',str(OUT)])
@@ -597,7 +677,7 @@ def main():
         'source':str(SRC),'source_sha256':base_sha,'source_versionCode':ver_before,
         'output':str(OUT),'output_sha256':sha(OUT),'bytes':OUT.stat().st_size,
         'package':'com.whatsapp.litex','versionName':'2.26.42.74','versionCode':TARGET_VERSION,
-        'signer':'CN=ProX Mod (a)','patches':{'mic':mic_reports,'view_once_receipt':receipt_reports,'classes14':class14_report},
+        'signer':'CN=ProX Mod (a)','patches':{'mic':mic_reports,'view_once_receipt':receipt_reports,'classes14':class14_report,'native_calls_switch':native_switch_report},
         'changed_entries':changed,'unexpected_entries':extra,'zipalign_ok':True,
         'signature_verify':verify.strip().splitlines(),'seconds':round(time.time()-started,1)
     }

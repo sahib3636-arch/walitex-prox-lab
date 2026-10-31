@@ -78,7 +78,22 @@ The `getPrm(55501/55502)` return-value hypothesis and a local replacement for `L
 - Run `41218735895` completed successfully. The `ProXSetPrmBanner` tag confirms the intercepted callback ran. `final.txt` and `litex_prefs.xml` show the calls switch did not persist.
 - Screenshot evidence: `evidence/premium-switch-transient-candidate-264207407.png`.
 
-This proves popup suppression alone does not make the calls feature work. Candidate `264207407` is diagnostic-only and must not be installed on the user's phone. Next, instrument `WaResources.setBoolean` and `PrmHandler.getPrm` to capture the exact key/value and premium decision made by the native listener.
+This proves popup suppression alone does not make the calls feature work. Candidate `264207407` is diagnostic-only and must not be installed on the user's phone.
+
+### Diagnostic candidate `264207408` (write tracing; failed acceptance test)
+
+- APK SHA-256: `08b40a530163798784e5cd32565a29825e3e1b6433294256cd6a5c54a4f148e5`
+- ZIP: `https://x0.at/elaN.zip` (SHA-256 `13c24339ed55b0796dec257fc1ad5cecebaa47f7f45584227b05ea9f15f3989d`)
+- Workflow `41219372357` completed, but the calls-switch test failed. Logcat recorded `getPrm(55501)`, then `walitex_block_calls_check=true`, immediately followed by `...=false`, then the banner callback. After reopening, row 5 was off and the preference remained false; rows 0–4 persisted.
+- Evidence: `evidence/calls-toggle-native-reset-candidate-264207408.txt`.
+- Native disassembly identifies the second false write at VA `0x6ff60`: `sturb wzr, [x29, #-0x28]`. The same JNI boolean slot had first been loaded from the checked state at `0x6fe08` (`sturb w21, [x29, #-0x28]`). This is the specific reset site to test; it is not evidence that the paid feature is unlocked.
+
+### Diagnostic candidate `264207409` (native reset-site test; workflow pending)
+
+- APK SHA-256: `b6aec8055a8902c7386514cd0f38096e51b92e83e1e5fbe8a1bc865e1f8c4587`
+- Diagnostic ZIP: `https://x0.at/Z009.zip` (SHA-256 `a6e6cda5e0c778eee5322054c002f3893e862f1bd9a02f92f1d39684271ae056`)
+- Patches only the verified native store at VA `0x6ff60` to NOP, with the builder refusing to patch if the ELF mapping or expected instructions differ. It retains write/getter logging and suppresses the Premium banner only for this local emulator test.
+- This is still a diagnostic candidate, not for user installation. A passing preference-persistence check would not by itself prove calls are blocked.
 
 ## Earlier useful results
 
@@ -97,7 +112,8 @@ This proves popup suppression alone does not make the calls feature work. Candid
 - `tooling/linked_update/update_linked.py` and its local helpers preserve the in-place patch/build logic without storing the APK or signing key in Git.
 - `scripts/upgrade_probe.sh` is the corrected in-place update probe; commit `f064eae` fixed its earlier output-path false negative.
 - `scripts/mod_toggles.sh` now keeps full dialog-stack and toggle-state trace excerpts from diagnostic runs.
-- `evidence/premium-dialog-candidate-264207405.png` preserves the latest Premium-dialog failure screenshot.
+- `evidence/premium-dialog-candidate-264207405.png` preserves the earlier Premium-dialog failure screenshot.
+- `evidence/calls-toggle-native-reset-candidate-264207408.txt` records the exact setter order, final false preference, and the guarded native reset-site hypothesis.
 
 ## Test/build policy
 

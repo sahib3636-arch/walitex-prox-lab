@@ -12,7 +12,7 @@ Typical local setup (paths may be overridden):
 export PROX_BUILD_DIR="$HOME/prox-build"
 export PROX_BASE_APK="$PROX_BUILD_DIR/incoming/mf9mic-signed.apk"
 # Load PROX_KEY_PASS from a secure local secret store; do not put it in shell history or Git.
-TARGET_VERSION=264207407 python3 tooling/linked_update/update_linked.py
+TARGET_VERSION=264207409 python3 tooling/linked_update/update_linked.py
 ```
 
 Dependencies include Python 3, Java, the Android SDK `aapt`, `zipalign`, and `apksigner`, `zip`, Capstone, and the Debian baksmali/smali jars used by the build. The builder fails if the input version is not lower than the target, the APK identity changes, an unexpected archive entry changes, or signing/zipalign verification fails.
@@ -24,7 +24,8 @@ Dependencies include Python 3, Java, the Android SDK `aapt`, `zipalign`, and `ap
 - `PROX_SUPPRESS_PRM_BANNER=1` suppresses `Extra.setPrmBanner` for a local calls-switch test; this only removes the popup and does not prove the feature works.
 - `PROX_DIAG_SET_BOOLEAN=1` replaces the native Boolean writer with a direct SharedPreferences writer and logs every key/value write.
 - `PROX_DIAG_GET_PRM=1` logs premium getter IDs while preserving the local `getPrm` return values.
+- `PROX_PATCH_PREMIUM_SWITCH_RESET=1` makes one guarded arm64 edit in the original `liblitex.so`: it NOPs the verified false-argument store at VA `0x6ff60`, preserving the checked value previously written into the same JNI argument slot. The builder checks the exact surrounding instructions and changes only this four-byte instruction. The candidate-408 evidence and the pending candidate-409 test are recorded in `docs/PROJECT_STATUS.md` and `evidence/`.
 
-Both are **diagnostic-only** and must be disabled for any release build unless the underlying behavior is independently validated and the patch is deliberately retained.
+All of these switches are for diagnostics/local testing; they are disabled by default. Do not ship the native switch patch or banner suppression until the toggle persists and the actual calls-blocking behavior is verified. Mic capture and Anti View Once receipts also require real-device tests.
 
 The local builder writes APKs/reports under `$PROX_BUILD_DIR/artifacts` and `$PROX_BUILD_DIR/report`, outside the repository. Never commit those files or any signing material.
