@@ -10,7 +10,7 @@ on:
       apk_sha256:
         description: expected sha256 of the APK (blank to skip)
         required: false
-        default: e882e7dc7387112fea464419143c8932e84c72f031a47c6dba0d83c0fb42e4b3
+        default: ""
       api_level:
         description: emulator API level
         required: false
