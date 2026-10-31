@@ -1,0 +1,17 @@
+# In-place update probe — candidate 264207409
+
+**Workflow:** `41220850995` (completed successfully)  
+**Candidate APK SHA-256:** `b6aec8055a8902c7386514cd0f38096e51b92e83e1e5fbe8a1bc865e1f8c4587`  
+**Base:** exact linked `mf9mic`, `versionCode=264207400`, package `com.whatsapp.litex`
+
+The API 31 emulator installed the base, enabled rows 0 and 2, then installed candidate 264207409 with `adb install -r` only. It did not uninstall or clear app data.
+
+- `upgrade-install.txt`: `Success`
+- `upgrade-result.txt`: `IN_PLACE_INSTALL=PASS`, `PREFS_PRESERVED=PASS`
+- Package remained `com.whatsapp.litex`; versionName stayed `2.26.42.74`.
+- VersionCode advanced `264207400` → `264207409`.
+- `userId` stayed `10145`; `firstInstallTime` stayed `2026-10-31 16:43:14`; `lastUpdateTime` advanced from `16:43:14` to `16:43:59`.
+- `prefs-before.xml` and `prefs-after.xml` were identical; rows 0 and 2 remained checked after the update.
+- Screenshot: `in-place-update-candidate-264207409.png`.
+
+This verifies the candidate's package/signing-compatible in-place update and app-data continuity on the emulator. It does not prove the companion link remains active on the user's S24 Ultra; that still requires device confirmation.

@@ -40,6 +40,12 @@ Run `41215960864` used the corrected `scripts/upgrade_probe.sh`, installing cand
 
 Evidence is in `/home/user/runs/mod9/` while that workspace is available. The concise probe output is also recorded in this document so the result does not depend on the temporary Actions artifact.
 
+### Candidate `264207409` in-place update test (emulator pass)
+
+Workflow `41220850995` installed candidate `264207409` over the exact linked base with `adb install -r`, without uninstalling or clearing data. `IN_PLACE_INSTALL=PASS` and `PREFS_PRESERVED=PASS`; package stayed `com.whatsapp.litex`, versionName stayed `2.26.42.74`, versionCode advanced `264207400` → `264207409`, userId remained `10145`, firstInstallTime was unchanged, and rows 0 and 2 remained checked. The preference XML before and after was identical. See `evidence/in-place-update-candidate-264207409.txt` and `.png`.
+
+This is emulator verification only; the existing companion link on the user's S24 Ultra still needs confirmation after any user-side update.
+
 ## Premium toggle: latest findings
 
 The privacy screen has six switches in the emulator test. Rows 0–4 are ordinary toggles; row 5 is “Disable calls and video calls” and is marked Premium.
@@ -96,7 +102,7 @@ This proves popup suppression alone does not make the calls feature work. Candid
 - Run `41220244459` failed before emulator startup due to a test-workflow self-move when a ZIP member was already named `app.apk`; fixed in commit `981d5ae`. The corrected rerun is `41220312147`.
 - Screenshot and exact evidence: `evidence/calls-switch-persistent-candidate-264207409.png` and `.txt`.
 - This is still a diagnostic candidate, not approved for user installation. It suppresses the Premium banner and instruments preferences. Persistence is verified; actual call blocking and legitimate Premium entitlement are not.
-- A separate in-place-update probe over the original linked base is running as workflow `41220850995`; the result is not yet known.
+- The separate in-place-update probe over the original linked base passed in workflow `41220850995`; details and evidence are recorded above. The candidate remains diagnostic-only because actual call blocking is unverified.
 
 ## Earlier useful results
 
@@ -118,6 +124,7 @@ This proves popup suppression alone does not make the calls feature work. Candid
 - `evidence/premium-dialog-candidate-264207405.png` preserves the earlier Premium-dialog failure screenshot.
 - `evidence/calls-toggle-native-reset-candidate-264207408.txt` records the exact setter order, final false preference, and the guarded native reset-site hypothesis.
 - `evidence/calls-switch-persistent-candidate-264207409.txt` and `.png` record the successful emulator persistence test while clearly distinguishing it from actual call-block verification.
+- `evidence/in-place-update-candidate-264207409.txt` and `.png` record the exact `adb install -r` update and preserved preferences on API 31.
 
 ## Test/build policy
 
