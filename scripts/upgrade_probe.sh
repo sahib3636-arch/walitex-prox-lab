@@ -2,6 +2,8 @@
 # Verify a signed update installs over the untouched linked-base package without uninstalling it,
 # and that app-owned preference data remains accessible after PackageManager's in-place replace.
 set -euo pipefail
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/require_emulator.sh"
 OUT=out
 mkdir -p "$OUT"
 PKG="${CLONE_PKG:-com.whatsapp.litex}"
@@ -14,6 +16,7 @@ if [[ ! -s original.apk || ! -s app.apk ]]; then
 fi
 
 adb wait-for-device
+require_android_emulator || exit $?
 adb root >/dev/null 2>&1 || true
 sleep 5
 adb wait-for-device

@@ -2,6 +2,9 @@
 # drive_one.sh <package> <main-activity> <tag>  — same walk as probe.sh, parameterised so the
 # original WA LiteX and the clone can be driven back to back on one emulator (A/B baseline).
 set -uo pipefail
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/require_emulator.sh"
+require_android_emulator || exit $?
 UI="python3 scripts/ui.py"
 PKG="$1"; MAIN="$2"; TAG="$3"
 OUT=out

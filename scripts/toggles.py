@@ -43,9 +43,25 @@ def centre(bounds: str):
     return (x1 + x2) // 2, (y1 + y2) // 2
 
 
+def require_emulator() -> bool:
+    from pathlib import Path
+
+    guard = Path(__file__).with_name("require_emulator.sh")
+    result = subprocess.run(
+        ["bash", "-c", 'source "$1"; require_android_emulator', "emulator-guard", str(guard)],
+        check=False,
+    )
+    return result.returncode == 0
+
+
 def main() -> int:
     cmd = sys.argv[1] if len(sys.argv) > 1 else "list"
     path = sys.argv[2] if len(sys.argv) > 2 else "/tmp/ui.xml"
+    if cmd not in {"list", "tap", "dump"}:
+        print(__doc__)
+        return 2
+    if not require_emulator():
+        return 2
     if cmd == "list":
         ui_dump(path)
         for i, n in enumerate(nodes(path)):

@@ -11,6 +11,8 @@ This public repository is the durable record for project source scripts, decisio
 
 The repository ignores common APK/signing outputs. Before every commit, review `git status --short` and scan staged files for tokens and private-key markers. Never print or copy the authenticated Git remote URL into a tracked file.
 
+All ADB test drivers must use `scripts/require_emulator.sh` and fail closed unless the selected target reports `ro.kernel.qemu=1`. Keep install, uninstall, and data-editing test flows off the user's linked S24 Ultra.
+
 ## Preserve durably
 
 - Source/patch scripts and their validation checks.

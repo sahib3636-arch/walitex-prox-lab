@@ -7,10 +7,13 @@
 # prints nothing to logcat, so the same question is answered from the outside instead: sample
 # /proc/net/tcp{,6} for the lifetime of a connected socket to port 443 (§01BB), every 4 s.
 set -uo pipefail
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/require_emulator.sh"
 OUT=out
 mkdir -p "$OUT"
 
 adb wait-for-device
+require_android_emulator || exit $?
 adb shell input keyevent KEYCODE_WAKEUP || true
 adb shell wm dismiss-keyguard || true
 adb shell settings put global window_animation_scale 0 || true

@@ -11,11 +11,14 @@
 #
 # Whoever shows a QR wins the argument about where the bug lives.
 set -uo pipefail
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/require_emulator.sh"
 OUT=out
 mkdir -p "$OUT"
 UI="python3 scripts/ui.py"
 
 adb wait-for-device
+require_android_emulator || exit $?
 adb root 2>&1 | tee "$OUT/root.txt" || true
 sleep 6
 adb wait-for-device

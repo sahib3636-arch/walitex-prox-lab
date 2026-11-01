@@ -23,6 +23,7 @@ live `adb logcat` for the whole run. Emulator success is not treated as proof of
 | `scripts/probe.sh` | the linking driver: launch → clear the custom-ROM alert / EULA / permissions → phone-number screen → overflow menu (3 tries) → *Link as companion device*, or straight to the companion activity → 240 s watch |
 | `scripts/upgrade_probe.sh` | verifies an `adb install -r` update over the exact linked base and checks package identity/preferences |
 | `scripts/mod_toggles.sh` | taps every privacy switch, captures persistence/modal screenshots, and preserves diagnostic log traces |
+| `scripts/require_emulator.sh` | fail-closed guard used by ADB drivers; blocks installs/uninstalls unless the selected ADB target reports `ro.kernel.qemu=1` |
 | `scripts/drive_one.sh` | the same walk for one package, for A/B runs |
 | `scripts/compare.sh` | historical control/clone comparison helper; not the current release path |
 | `scripts/ab_connect.sh` | launches builds and samples `/proc/net/tcp{,6}` by uid, for connection diagnostics |
@@ -45,6 +46,9 @@ live `adb logcat` for the whole run. Emulator success is not treated as proof of
   alone does not resume them.
 * Concurrency groups must include every input that changes the job, or a second dispatch cancels the
   first.
+* Every ADB test driver uses `scripts/require_emulator.sh` before touching packages or app data.
+  It fails closed on physical devices, including the user's S24 Ultra; select a disposable emulator
+  explicitly with `ANDROID_SERIAL` when more than one ADB target is attached.
 
 ## Inputs
 

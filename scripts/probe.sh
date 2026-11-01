@@ -2,6 +2,8 @@
 # Drive WA ProX on a clean emulator until the "Link as companion device" screen, then watch it.
 # Everything lands in out/ ; the workflow uploads out/ as an artifact.
 set -uo pipefail
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/require_emulator.sh"
 export PATH="$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin"
 OUT=out
 mkdir -p "$OUT"
@@ -19,6 +21,7 @@ capture() {  # capture <tag>
 }
 
 adb wait-for-device
+require_android_emulator || exit $?
 adb shell input keyevent KEYCODE_WAKEUP || true
 adb shell wm dismiss-keyguard || true
 adb shell settings put system screen_off_timeout 1800000 || true

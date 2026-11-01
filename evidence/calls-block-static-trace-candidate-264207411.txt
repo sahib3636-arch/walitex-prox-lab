@@ -1,0 +1,56 @@
+WA LiteX candidate 264207411 — static call-block path trace
+Reviewed: 2026-11-01 (Asia/Karachi)
+
+Build identity
+- Candidate APK: walitex-mf9mic-update-264207411.apk
+- Package: com.whatsapp.litex
+- versionCode: 264207411; versionName: 2.26.42.74
+- Signer: CN=ProX Mod (a)
+- APK SHA-256: 955ba44f2bf5828038b7ca3d829b09a0f8d99279968855154d65103bd1ba0179
+- Test ZIP: https://x0.at/FV9w.zip
+- ZIP SHA-256: 54d209df09ec30bda0f41c604c69875744ed8ccb385a3fa5d87cc8e8e8f4cb7a
+- Built from the exact linked base mf9mic / 264207400. The native SharedPreferences writer is retained;
+  the guarded native reset store at VA 0x6ff60 is NOPed, and Extra.setPrmBanner is suppressed solely
+  for local testing. This is not an entitlement and is not release behavior.
+
+Static evidence (base DEX/native disassembly)
+1. In classes7.dex, LX/CMk implements android.os.Handler$Callback. LX/Ahz.A00 constructs three
+   CVC-backed LX/CMk handlers with discriminators 1, 2, and 3, storing discriminator 3 in CVC.A0G.
+   On that handler's default branch, LX/CMk.handleMessage first casts its owner to LX/CVC and calls
+   Llitex/settings/PrivacyActivity;->getPrivacyCalls(Ljava/lang/Object;)Z before processing the
+   message. The following message-dispatch code includes the incoming-call key "participant_jid".
+   If getPrivacyCalls returns true, the handler exits that path immediately.
+
+2. In lib/arm64-v8a/liblitex.so, the exported native method
+   Java_litex_settings_PrivacyActivity_getPrivacyCalls__Ljava_lang_Object_2 starts at VA 0x92558.
+   It creates/reads the preference key "walitex_block_calls_check" (string VA 0x1cba8; xref at
+   0x92b80). When the preference branch is taken, the method continues through the call-mode checks
+   and constructs litex/bridge/RunnableTask with its integer discriminator set to 6 (constructor
+   setup around 0x931d4–0x93234). It then obtains ScheduledThreadPoolExecutor.execute with the
+   (Ljava/lang/Runnable;)V descriptor and submits that RunnableTask (around 0x93250–0x932a8).
+
+3. The RunnableTask native dispatcher has a mode-6 branch. Its runCase6 bridge starts at VA
+   0x77594 and resolves com/whatsapp/calling/voipcalling/Voip->rejectCall with descriptor
+   (Ljava/lang/String;Ljava/lang/String;I)V (method-name reference formed at 0x7774c). Thus there is
+   a static route from the calls preference, through the call-message handler and RunnableTask, to
+   WhatsApp's rejectCall API.
+
+4. Candidate 264207411 does not replace WaResources.setBoolean; the original native preference
+   writer remains. The reset-site patch changes only the verified false-argument store at 0x6ff60,
+   preserving the earlier requested-value store at 0x6fe08. The banner suppression is isolated to
+   Extra.setPrmBanner and does not itself establish that calls are rejected.
+
+Interpretation and limits
+- This is a concrete static enforcement path, not just a preference getter or UI marker. It makes
+  it plausible that the calls feature will reject matching incoming calls when the saved preference
+  and other mode/filter conditions permit.
+- No incoming call has been tested with candidate 264207411 on an emulator or the S24 Ultra. Actual
+  rejection, ring behavior, mode/filter semantics, and the caller-side result remain unverified.
+- The candidate's switch persistence has not been emulator-tested. In-place installation of this
+  exact candidate has not been tested; candidate 264207409 was separately verified with adb install
+  -r over the exact base, but that is not a substitute for testing 411.
+- Voice-note capture and Anti View Once repeat-view/download plus sender-visible “Opened” also remain
+  unverified on the S24 Ultra.
+
+Conclusion: useful local diagnostic candidate only. Do not label it unlocked, fixed, release-ready,
+or verified on the user's phone until the above behavior is tested.

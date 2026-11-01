@@ -7,11 +7,14 @@
 # Both are driven through `adb root` + `am start` of the companion activity with the same extra the
 # ⋮ menu item uses, so no build needs its own shim.
 set -uo pipefail
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/require_emulator.sh"
 OUT=out
 mkdir -p "$OUT"
 UI="python3 scripts/ui.py"
 
 adb wait-for-device
+require_android_emulator || exit $?
 adb root >/dev/null 2>&1 || true
 sleep 6
 adb wait-for-device

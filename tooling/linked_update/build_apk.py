@@ -44,7 +44,7 @@ def sign(apk: Path) -> str:
     _run([
         "apksigner", "sign",
         "--ks", str(KEYSTORE), "--ks-key-alias", KEY_ALIAS,
-        "--ks-pass", f"pass:{password}",
+        "--ks-pass", "env:PROX_KEY_PASS",
         "--lineage", str(LINEAGE), "--rotation-min-sdk-version", "28",
         "--v1-signing-enabled", "true", "--v2-signing-enabled", "true",
         "--v3-signing-enabled", "true", "--min-sdk-version", "23",

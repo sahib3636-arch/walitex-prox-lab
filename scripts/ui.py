@@ -78,11 +78,25 @@ def listing(root) -> list[str]:
     return rows
 
 
+def require_emulator() -> bool:
+    guard = Path(__file__).with_name("require_emulator.sh")
+    result = subprocess.run(
+        ["bash", "-c", 'source "$1"; require_android_emulator', "emulator-guard", str(guard)],
+        check=False,
+    )
+    return result.returncode == 0
+
+
 def main() -> int:
     if len(sys.argv) < 2:
         print(__doc__)
         return 2
     cmd, args = sys.argv[1], sys.argv[2:]
+    if cmd not in {"shot", "key", "raw", "has", "list", "tap"}:
+        print(f"unknown command {cmd}")
+        return 2
+    if not require_emulator():
+        return 2
 
     if cmd == "shot":
         shot(args[0] if args else "shot")

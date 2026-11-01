@@ -5,6 +5,8 @@
 # pop its "premium only" message and put the switch back. That is the user's symptom, reproduced or
 # disproved on demand.
 set -uo pipefail
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/require_emulator.sh"
 OUT=out
 mkdir -p "$OUT"
 PKG="${PKG:-com.whatsapp.litex}"
@@ -12,6 +14,7 @@ ACT="${ACT:-litex.settings.PrivacyActivity}"
 UI="python3 scripts/toggles.py"
 
 adb wait-for-device
+require_android_emulator || exit $?
 adb root >/dev/null 2>&1 || true
 sleep 5
 adb wait-for-device

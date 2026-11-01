@@ -7,6 +7,8 @@
 #   B. a hard stop loses it (i.e. only the clean close matters);
 #   C. the screen reads `walitex_<name>_switch`, so seeding that key directly must light it up.
 set -uo pipefail
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/require_emulator.sh"
 OUT=out
 mkdir -p "$OUT"
 PKG="${PKG:-com.whatsapp.litex}"
@@ -15,6 +17,7 @@ PREFS="/data/data/$PKG/shared_prefs/litex_prefs.xml"
 UI="python3 scripts/toggles.py"
 
 adb wait-for-device
+require_android_emulator || exit $?
 adb root >/dev/null 2>&1 || true
 sleep 5
 adb wait-for-device

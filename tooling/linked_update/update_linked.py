@@ -52,7 +52,7 @@ ROOT = Path(os.environ.get('PROX_ROOT', str(Path.home())))
 PKGDIR = Path(os.environ.get('PROX_BUILD_DIR', str(ROOT / 'prox-build')))
 SRC = Path(os.environ.get('PROX_BASE_APK', str(PKGDIR / 'incoming' / 'mf9mic-signed.apk')))
 WORK = PKGDIR / 'update-work'
-TARGET_VERSION = int(os.environ.get('TARGET_VERSION', '264207407'))
+TARGET_VERSION = int(os.environ.get('TARGET_VERSION', '264207412'))
 OUT = PKGDIR / 'artifacts' / f'walitex-mf9mic-update-{TARGET_VERSION}.apk'
 REPORT = PKGDIR / 'report' / f'update-{TARGET_VERSION}.json'
 DIAG_TOGGLE = os.environ.get('PROX_DIAG_TOGGLE', '0') == '1'

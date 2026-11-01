@@ -3,10 +3,13 @@
 # If the original shows a QR here and the clone does not, the fault is ours and the two logcats
 # can be diffed. If neither shows a QR, the emulator cannot answer this question by itself.
 set -uo pipefail
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/require_emulator.sh"
 export PATH="$PATH:$ANDROID_HOME/platform-tools"
 OUT=out; mkdir -p "$OUT"
 
 adb wait-for-device
+require_android_emulator || exit $?
 adb shell input keyevent KEYCODE_WAKEUP || true
 adb shell wm dismiss-keyguard || true
 adb shell settings put system screen_off_timeout 1800000 || true

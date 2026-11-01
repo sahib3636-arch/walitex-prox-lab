@@ -1,7 +1,7 @@
 # WA LiteX project status — Request 7
 
-**Last updated:** 2026-10-31 (Asia/Karachi)
-**Status:** active investigation; no new build is approved for user installation.
+**Last updated:** 2026-11-01 (Asia/Karachi)
+**Status:** active investigation; no new build is approved for general user installation. Candidate `264207411` is a local diagnostic build only.
 
 ## Goal and release gate
 
@@ -13,7 +13,7 @@ Improve the existing WA LiteX build the user installed and linked. Do not recrea
 4. An update installs over package `com.whatsapp.litex` with the same signing identity, a higher `versionCode`, unchanged `versionName`, and preserved companion link/data.
 5. Anti View Once still allows repeat viewing/download behavior while the sender receives an “Opened” receipt.
 
-Do not claim any feature is fixed until its behavior is tested. Mic capture, sender-side receipt visibility, repeat-view/download behavior, and the real-device end-to-end update remain unverified.
+Do not claim any feature is fixed until its behavior is tested. Actual incoming-call rejection, candidate `264207411` switch persistence and in-place update, mic capture, sender-side receipt visibility, repeat-view/download behavior, and the real-device end-to-end update remain unverified.
 
 ## Identity and known-good base
 
@@ -112,6 +112,14 @@ This proves popup suppression alone does not make the calls feature work. Candid
 - The Premium dialog still appears on tap, and while it is open the switch looks off. After closing/reopening the screen, the persisted preference displays on. Screenshots and details: `evidence/calls-switch-native-writer-candidate-264207410.txt` and two `.png` files.
 - This confirms persistence through the original native writer, **not** that incoming calls are blocked. The UI still presents the feature as Premium, so this candidate is not an unlock and is not approved for user installation.
 
+### Candidate `264207411` (local test; static call path found, dynamic checks pending)
+
+- APK SHA-256: `955ba44f2bf5828038b7ca3d829b09a0f8d99279968855154d65103bd1ba0179`; size 123,703,596 bytes.
+- Test ZIP: `https://x0.at/FV9w.zip` (SHA-256 `54d209df09ec30bda0f41c604c69875744ed8ccb385a3fa5d87cc8e8e8f4cb7a`). The ZIP was downloaded again and its hash matched; `unzip -t` passed.
+- Identity: package `com.whatsapp.litex`, versionCode `264207411`, versionName `2.26.42.74`, signer `CN=ProX Mod (a)` (certificate SHA-256 matches the known base signer). `aapt dump badging`, `zipalign -c`, `apksigner verify` (v1/v2/v3), and APK ZIP integrity checks passed. It was built from the exact linked base with the native preference writer retained, the guarded `0x6ff60` false-reset store NOPed, and `Extra.setPrmBanner` suppressed solely for local feature testing.
+- Static DEX/native tracing found a concrete path from the `walitex_block_calls_check` preference through `LX/CMk.handleMessage` and `PrivacyActivity.getPrivacyCalls` to a `RunnableTask` mode 6 that calls `Voip.rejectCall(String,String,int)`. Evidence and offsets: `evidence/calls-block-static-trace-candidate-264207411.txt`.
+- This materially improves the static understanding, but it is **not a behavior test**. Candidate 411 has not been emulator-tested for switch persistence, real call rejection, or `adb install -r` over the exact base. The S24 Ultra has not been tested. The banner suppression is not a Premium entitlement; this build remains diagnostic-only and is not approved as a release.
+
 ## Earlier useful results
 
 - Candidate `264207403` was installed over the linked base by run `41215277866` (`adb install -r` succeeded). The first workflow reported failure only because the probe mixed XML and assertion text into one file. The probe was corrected and pushed as commit `f064eae`.
@@ -126,7 +134,8 @@ This proves popup suppression alone does not make the calls feature work. Candid
 
 ## Durable project files
 
-- `tooling/linked_update/update_linked.py` and its local helpers preserve the in-place patch/build logic without storing the APK or signing key in Git.
+- `tooling/linked_update/` contains `update_linked.py`, its `build_apk.py`, `mic_patch.py`, and `axml.py` helpers; the exact base APK, signing keystore, lineage, and passwords remain outside Git.
+- The builder keeps the exact existing `P06_NEW` implementation. Logging remains isolated in `P06_DIAG_NEW` and is selected only with its diagnostic flag.
 - `scripts/upgrade_probe.sh` is the corrected in-place update probe; commit `f064eae` fixed its earlier output-path false negative.
 - `scripts/mod_toggles.sh` now keeps full dialog-stack and toggle-state trace excerpts from diagnostic runs.
 - `evidence/premium-dialog-candidate-264207405.png` preserves the earlier Premium-dialog failure screenshot.
@@ -134,6 +143,7 @@ This proves popup suppression alone does not make the calls feature work. Candid
 - `evidence/calls-switch-persistent-candidate-264207409.txt` and `.png` record the successful emulator persistence test while clearly distinguishing it from actual call-block verification.
 - `evidence/in-place-update-candidate-264207409.txt` and `.png` record the exact `adb install -r` update and preserved preferences on API 31.
 - `evidence/calls-switch-native-writer-candidate-264207410.txt` and screenshots show that native preferences persist while the Premium dialog remains visible.
+- `evidence/calls-block-static-trace-candidate-264207411.txt` records the DEX/native route from the calls preference to the WhatsApp `rejectCall` API, with explicit caveats that dynamic call-blocking and candidate-411 update tests remain undone.
 
 ## Test/build policy
 
