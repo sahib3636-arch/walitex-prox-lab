@@ -23,11 +23,15 @@ Static evidence (base DEX/native disassembly)
 
 2. In lib/arm64-v8a/liblitex.so, the exported native method
    Java_litex_settings_PrivacyActivity_getPrivacyCalls__Ljava_lang_Object_2 starts at VA 0x92558.
-   It creates/reads the preference key "walitex_block_calls_check" (string VA 0x1cba8; xref at
-   0x92b80). When the preference branch is taken, the method continues through the call-mode checks
-   and constructs litex/bridge/RunnableTask with its integer discriminator set to 6 (constructor
-   setup around 0x931d4–0x93234). It then obtains ScheduledThreadPoolExecutor.execute with the
-   (Ljava/lang/Runnable;)V descriptor and submits that RunnableTask (around 0x93250–0x932a8).
+   It resolves CallInfo/peer-JID data, obtains the peer number, and builds per-number
+   "walitex_block_calls_" preference names. It reads "walitex_block_calls_check" (string VA
+   0x1cba8; xref at 0x92b80), the integer "walitex_block_calls_mode" (xref at 0x92c20), and the
+   configured "walitex_blocked_country_prefixes" string (xref at 0x92d44). The function trims and
+   iterates the configured values and contains a String.startsWith check (xref at 0x93694). Its
+   matching/mode branch constructs litex/bridge/RunnableTask with integer discriminator 6
+   (constructor setup around 0x931d4–0x93234), then obtains ScheduledThreadPoolExecutor.execute
+   with the (Ljava/lang/Runnable;)V descriptor and submits that RunnableTask (around
+   0x93250–0x932a8).
 
 3. The RunnableTask native dispatcher has a mode-6 branch. Its runCase6 bridge starts at VA
    0x77594 and resolves com/whatsapp/calling/voipcalling/Voip->rejectCall with descriptor
